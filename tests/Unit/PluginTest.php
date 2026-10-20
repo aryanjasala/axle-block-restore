@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for which post types get the editor tools, and the revision author field.
+ * Tests for which post types get the editor tools, and the revision REST fields.
  *
  * @package AryanX\RestoreBlocksFromRevisions
  */
@@ -9,6 +9,7 @@ namespace AryanX\RestoreBlocksFromRevisions\Tests\Unit;
 
 use AryanX\RestoreBlocksFromRevisions\Plugin;
 use AryanX\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
+use AryanX\RestoreBlocksFromRevisions\Rest\RevisionContent;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 
@@ -60,5 +61,70 @@ final class PluginTest extends TestCase {
 
 		$this->assertSame( 'Aryan', $field->author_name( array( 'author' => 3 ) ) );
 		$this->assertSame( '', $field->author_name( array( 'author' => 99 ) ) );
+	}
+
+	/**
+	 * Runs the content filter on a revision response.
+	 *
+	 * @param array $data   Response data from core.
+	 * @param array $params Request parameters.
+	 * @return mixed Response data after the filter.
+	 */
+	private function revision_response( array $data, array $params ) {
+		Functions\when( 'wp_parse_list' )->alias(
+			static function ( $list ) {
+				return is_array( $list ) ? $list : array_values( array_filter( array_map( 'trim', explode( ',', (string) $list ) ) ) );
+			}
+		);
+		$revision = new \WP_Post( array( 'post_content' => '<!-- wp:paragraph --><p>Old</p><!-- /wp:paragraph -->' ) );
+
+		return ( new RevisionContent() )->add_raw_content( new \WP_REST_Response( $data ), $revision, new \WP_REST_Request( $params ) )->get_data();
+	}
+
+	public function test_raw_content_is_added_when_core_leaves_it_out(): void {
+		$data = $this->revision_response(
+			array( 'id' => 5 ),
+			array(
+				'context' => 'edit',
+				'_fields' => 'id,date_gmt,content.raw',
+			)
+		);
+
+		$this->assertSame( '<!-- wp:paragraph --><p>Old</p><!-- /wp:paragraph -->', $data['content']['raw'] );
+	}
+
+	public function test_content_from_core_is_left_alone(): void {
+		$data = $this->revision_response(
+			array(
+				'id'      => 5,
+				'content' => array( 'raw' => 'From core' ),
+			),
+			array(
+				'context' => 'edit',
+				'_fields' => array( 'id', 'content.raw' ),
+			)
+		);
+
+		$this->assertSame( array( 'raw' => 'From core' ), $data['content'] );
+	}
+
+	public function test_raw_content_needs_the_edit_context_and_the_field(): void {
+		$view = $this->revision_response(
+			array( 'id' => 5 ),
+			array(
+				'context' => 'view',
+				'_fields' => 'content.raw',
+			)
+		);
+		$unasked = $this->revision_response(
+			array( 'id' => 5 ),
+			array(
+				'context' => 'edit',
+				'_fields' => 'id,date_gmt',
+			)
+		);
+
+		$this->assertArrayNotHasKey( 'content', $view );
+		$this->assertArrayNotHasKey( 'content', $unasked );
 	}
 }
