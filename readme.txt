@@ -4,7 +4,7 @@ Tags: revisions, block editor, undo, restore, gutenberg
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,9 @@ Not yet. Templates have revisions too, and support is planned.
 3. Finding deleted text across revisions.
 
 == Changelog ==
+
+= 2.0.0 =
+* Changed (breaking change): rename to Restore Blocks from Revisions for WordPress.org
 
 = 1.3.0 =
 * Fix: make the abilities visible to MCP agents
