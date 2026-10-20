@@ -123,6 +123,7 @@ test.describe( 'Restore Blocks from Revisions', () => {
 	} );
 
 	test( 'abilities: an agent finds deleted and changed blocks and puts single blocks back', async ( { rest } ) => {
+		test.skip( 'yes' !== wpEval( "echo function_exists( 'wp_register_ability' ) ? 'yes' : 'no';" ), 'The Abilities API needs WordPress 6.9.' );
 		const postId = await createPost( rest, 'RBR agent' );
 		const run = ( name, method, input ) =>
 			'GET' === method

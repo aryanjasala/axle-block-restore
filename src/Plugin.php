@@ -9,6 +9,7 @@ namespace AryanX\RestoreBlocksFromRevisions;
 
 use AryanX\RestoreBlocksFromRevisions\Editor\Assets;
 use AryanX\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
+use AryanX\RestoreBlocksFromRevisions\Rest\RevisionContent;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,7 +32,7 @@ final class Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 
-			$services = array( new Assets(), new RevisionAuthor(), new Abilities() );
+			$services = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new Abilities() );
 			foreach ( $services as $service ) {
 				$service->register();
 			}
