@@ -26,6 +26,9 @@
 
 WordPress revisions are all or nothing. If someone deleted a paragraph last week and the post has been edited ten times since, restoring the revision brings the paragraph back and throws away the ten edits. Restore One Block works inside the editor and restores single blocks, with all their settings, as a normal undoable change.
 
+> [!NOTE]
+> Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
+
 ## Features
 
 - **Block menu > Restore from a revision…**: that block's versions in each revision, best match first
@@ -99,6 +102,17 @@ tests/
 .wordpress-org/           screenshots
 docs/                     reference, development, contributing, releasing
 ```
+
+## More free plugins
+
+Small plugins that each fill one gap in WordPress, all free with no pro version:
+
+| | Plugin | What it does |
+| --- | --- | --- |
+| <img src="https://raw.githubusercontent.com/aryanjasala/template-usage-column/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Template Usage Column](https://github.com/aryanjasala/template-usage-column) | See which template every page uses, and fix the pages on a missing template |
+| <img src="https://raw.githubusercontent.com/aryanjasala/staging-guard/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Staging Guard](https://github.com/aryanjasala/staging-guard) | Stops staging copies from emailing real people or getting indexed |
+| <img src="https://raw.githubusercontent.com/aryanjasala/term-trash/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Term Trash](https://github.com/aryanjasala/term-trash) | A trash for categories, tags and custom terms, with undo and full restore |
+| <img src="https://raw.githubusercontent.com/aryanjasala/deploy-freeze/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Deploy Freeze](https://github.com/aryanjasala/deploy-freeze) | Read-only mode for WordPress during migrations and deploys |
 
 ## License
 
