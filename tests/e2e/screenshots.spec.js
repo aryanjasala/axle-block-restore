@@ -1,13 +1,7 @@
 // Regenerates .wordpress-org/screenshot-N.png (readme.txt "== Screenshots ==" and README.md).
 // Run on demand: npm run screenshots
-const path = require( 'path' );
 const { test, expect, openEditor } = require( './utils' );
-
-// Modals fade in, so give them a moment to settle before the shot.
-const shot = async ( page, number ) => {
-	await page.waitForTimeout( 600 );
-	return page.screenshot( { path: path.join( __dirname, '..', '..', '.wordpress-org', `screenshot-${ number }.png` ) } );
-};
+const { prepareSite, shot } = require( './utils/media' );
 const p = ( text ) => `<!-- wp:paragraph --><p>${ text }</p><!-- /wp:paragraph -->`;
 const h = ( text ) => `<!-- wp:heading --><h2 class="wp-block-heading">${ text }</h2><!-- /wp:heading -->`;
 
@@ -18,10 +12,11 @@ const VERSIONS = [
 ].map( ( blocks ) => blocks.join( '\n\n' ) );
 
 test.describe( 'Screenshots', () => {
-	test.use( { viewport: { width: 1280, height: 800 } } );
+	test.use( { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 } );
 	let postId;
 
 	test.beforeAll( async ( { request } ) => {
+		prepareSite( 'Kitchen Notes' );
 		const nonce = ( await ( await request.get( '/wp-admin/admin-ajax.php?action=rest-nonce' ) ).text() ).trim();
 		const save = ( id, data ) => request.post( `/index.php?rest_route=/wp/v2/posts${ id ? '/' + id : '' }`, { headers: { 'X-WP-Nonce': nonce }, data } );
 		postId = ( await ( await save( 0, { title: 'Sourdough basics', status: 'draft', content: 'x' } ) ).json() ).id;

@@ -8,6 +8,7 @@
     "env:stop": "docker compose -f tests/e2e/env/docker-compose.yml down -v",
     "test:e2e": "playwright test",
     "screenshots": "SCREENSHOTS=1 playwright test screenshots",
+    "demo": "DEMO=1 playwright test demo",
     "test:unit:js": "node --test tests/js/"
   },
   "devDependencies": {
