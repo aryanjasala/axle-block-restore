@@ -91,6 +91,37 @@ test.describe( 'Restore One Block', () => {
 		expect( ( await blocksNow( page ) )[ 2 ] ).toBe( 'Flour, water, salt.' );
 	} );
 
+	test( 'JavaScript hooks: canRestore hides the menu item, restored reports what came back', async ( { page, rest } ) => {
+		const postId = await createPost( rest, 'ROB hooks' );
+		await openEditor( page, postId );
+		await page.evaluate( () => {
+			window.robRestored = [];
+			window.wp.hooks.addFilter( 'restoreOneBlock.canRestore', 'rob-e2e', ( canRestore, block ) => canRestore && 'core/heading' !== block.name );
+			window.wp.hooks.addAction( 'restoreOneBlock.restored', 'rob-e2e', ( details ) => window.robRestored.push( { mode: details.mode, name: details.block.name, revisionId: details.revisionId, postId: details.postId } ) );
+		} );
+
+		// The heading has no "Restore from a revision…" item now.
+		const blockMenu = async ( index ) => {
+			const id = await page.evaluate( ( i ) => window.wp.data.select( 'core/block-editor' ).getBlocks()[ i ].clientId, index );
+			await page.evaluate( ( clientId ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( clientId ), id );
+			await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
+		};
+		await blockMenu( 1 );
+		await expect( page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ) ).toHaveCount( 0 );
+		await page.keyboard.press( 'Escape' );
+
+		// A paragraph still has it, and restoring fires the action.
+		await blockMenu( 2 );
+		await page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ).click();
+		const best = page.locator( '.rob-card' ).first();
+		await best.getByRole( 'button', { name: 'Replace current block' } ).click();
+
+		const restored = await page.evaluate( () => window.robRestored );
+		expect( restored ).toHaveLength( 1 );
+		expect( restored[ 0 ] ).toMatchObject( { mode: 'replace', name: 'core/paragraph', postId } );
+		expect( restored[ 0 ].revisionId ).toBeGreaterThan( 0 );
+	} );
+
 	test( 'restores a block nested inside a group', async ( { page, rest } ) => {
 		const postId = await createPost( rest, 'ROB nested' );
 		await openEditor( page, postId );

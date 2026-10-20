@@ -11,6 +11,8 @@
 	const { registerPlugin } = wp.plugins;
 	const { BlockSettingsMenuControls } = wp.blockEditor;
 	const { MenuItem } = wp.components;
+	const { select } = wp.data;
+	const { applyFilters } = wp.hooks;
 	const PluginMoreMenuItem = ( wp.editor && wp.editor.PluginMoreMenuItem ) || ( wp.editPost && wp.editPost.PluginMoreMenuItem );
 
 	function RestoreOneBlock() {
@@ -28,6 +30,16 @@
 			el( BlockSettingsMenuControls, null, ( fillProps ) => {
 				const ids = fillProps.selectedClientIds || [];
 				if ( 1 !== ids.length ) {
+					return null;
+				}
+
+				/**
+				 * Filters whether a block offers "Restore from a revision…" in its menu.
+				 *
+				 * @param {boolean} canRestore Default true.
+				 * @param {Object}  block      The selected block.
+				 */
+				if ( ! applyFilters( 'restoreOneBlock.canRestore', true, select( 'core/block-editor' ).getBlock( ids[ 0 ] ) ) ) {
 					return null;
 				}
 				return el(

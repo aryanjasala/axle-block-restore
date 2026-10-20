@@ -56,6 +56,7 @@ final class Assets implements Service {
 				'wp-date',
 				'wp-editor',
 				'wp-element',
+				'wp-hooks',
 				'wp-i18n',
 				'wp-notices',
 				'wp-url',
@@ -63,7 +64,7 @@ final class Assets implements Service {
 			VERSION,
 			true
 		);
-		wp_enqueue_script( 'restore-one-block', $url . 'js/index.js', array( 'restore-one-block-components', 'wp-plugins' ), VERSION, true );
+		wp_enqueue_script( 'restore-one-block', $url . 'js/index.js', array( 'restore-one-block-components', 'wp-data', 'wp-hooks', 'wp-plugins' ), VERSION, true );
 
 		wp_set_script_translations( 'restore-one-block-components', 'restore-one-block' );
 		wp_set_script_translations( 'restore-one-block', 'restore-one-block' );

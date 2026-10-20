@@ -9,32 +9,45 @@ namespace AryanX\RestoreOneBlock\Tests\Unit;
 
 use AryanX\RestoreOneBlock\Plugin;
 use AryanX\RestoreOneBlock\Rest\RevisionAuthor;
+use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 
 final class PluginTest extends TestCase {
 
-	public function test_only_editor_post_types_with_revisions_are_supported(): void {
-		Functions\when( 'get_post_types' )->justReturn(
-			array(
-				'post'       => 'post',
-				'page'       => 'page',
-				'attachment' => 'attachment',
-				'wp_block'   => 'wp_block',
-			)
+	/**
+	 * Post types and what they support, as WordPress would report them.
+	 */
+	private function post_types_exist(): void {
+		$supports = array(
+			'post'       => array( 'editor', 'revisions' ),
+			'page'       => array( 'editor', 'revisions' ),
+			'attachment' => array(),
+			'wp_block'   => array( 'editor' ),
 		);
-		Functions\when( 'post_type_supports' )->alias(
-			static function ( $post_type, $feature ) {
-				$supports = array(
-					'post'       => array( 'editor', 'revisions' ),
-					'page'       => array( 'editor', 'revisions' ),
-					'attachment' => array(),
-					'wp_block'   => array( 'editor' ),
-				);
-				return in_array( $feature, $supports[ $post_type ], true );
+		Functions\when( 'get_post_types' )->justReturn( array_combine( array_keys( $supports ), array_keys( $supports ) ) );
+		Functions\when( 'post_type_exists' )->alias(
+			static function ( $post_type ) use ( $supports ) {
+				return isset( $supports[ $post_type ] );
 			}
 		);
+		Functions\when( 'post_type_supports' )->alias(
+			static function ( $post_type, $feature ) use ( $supports ) {
+				return in_array( $feature, $supports[ $post_type ] ?? array(), true );
+			}
+		);
+	}
+
+	public function test_only_editor_post_types_with_revisions_are_supported(): void {
+		$this->post_types_exist();
 
 		$this->assertSame( array( 'post', 'page' ), Plugin::post_types() );
+	}
+
+	public function test_the_filter_can_narrow_the_list_but_not_add_types_without_revisions(): void {
+		$this->post_types_exist();
+		Filters\expectApplied( 'restore_one_block_post_types' )->andReturn( array( 'post', 'attachment', 'product' ) );
+
+		$this->assertSame( array( 'post' ), Plugin::post_types() );
 	}
 
 	public function test_revision_author_is_the_display_name(): void {

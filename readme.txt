@@ -44,6 +44,8 @@ Every restore is a normal edit: press Ctrl+Z (⌘Z on a Mac) to undo it, and not
 
 No settings and nothing stored in the database.
 
+Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
+
 == Frequently Asked Questions ==
 
 = How does it find "the same block" in an old revision? =
