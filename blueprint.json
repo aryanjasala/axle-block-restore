@@ -1,0 +1,34 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"meta": {
+		"title": "Restore One Block demo",
+		"author": "aryanjasala"
+	},
+	"landingPage": "/wp-admin/post.php?post=100&action=edit",
+	"preferredVersions": {
+		"php": "8.3",
+		"wp": "latest"
+	},
+	"features": {
+		"networking": true
+	},
+	"login": true,
+	"steps": [
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "git:directory",
+				"url": "https://github.com/aryanjasala/restore-one-block",
+				"ref": "main"
+			},
+			"options": {
+				"activate": true,
+				"targetFolderName": "restore-one-block"
+			}
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php require_once '/wordpress/wp-load.php'; $p = function ( $text ) { return '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->'; }; $h = '<!-- wp:heading --><h2 class=\"wp-block-heading\">Method</h2><!-- /wp:heading -->'; $intro = $p( 'A starter is flour and water that has been fed for a week or two.' ); $id = wp_insert_post( array( 'import_id' => 100, 'post_title' => 'Sourdough basics', 'post_status' => 'publish', 'post_author' => 1, 'post_content' => $intro ) ); wp_update_post( array( 'ID' => $id, 'post_content' => implode( \"\\n\\n\", array( $intro, $h, $p( 'Mix flour, sugar and eggs, then rest the dough overnight in a cool place.' ), $p( 'Tip: keep a spoon of starter back before you bake, so the next loaf is ready to go.' ) ) ) ) ); wp_update_post( array( 'ID' => $id, 'post_content' => implode( \"\\n\\n\", array( $intro, $h, $p( 'Mix flour, water and salt, then rest the dough for two hours.' ) ) ) ) );"
+		}
+	]
+}
