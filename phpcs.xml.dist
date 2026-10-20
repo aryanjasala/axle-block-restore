@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="Restore One Block">
-	<description>WordPress coding standards for Restore One Block.</description>
+<ruleset name="Restore Blocks from Revisions">
+	<description>WordPress coding standards for Restore Blocks from Revisions.</description>
 
 	<file>.</file>
 	<exclude-pattern>/vendor/*</exclude-pattern>
@@ -24,7 +24,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="restore-one-block"/>
+				<element value="restore-blocks-from-revisions"/>
 			</property>
 		</properties>
 	</rule>
@@ -32,8 +32,8 @@
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">
-				<element value="AryanX\RestoreOneBlock"/>
-				<element value="restore_one_block"/>
+				<element value="AryanX\RestoreBlocksFromRevisions"/>
+				<element value="restore_blocks_from_revisions"/>
 			</property>
 		</properties>
 	</rule>

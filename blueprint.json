@@ -1,7 +1,7 @@
 {
 	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
 	"meta": {
-		"title": "Restore One Block demo",
+		"title": "Restore Blocks from Revisions demo",
 		"author": "aryanjasala"
 	},
 	"landingPage": "/wp-admin/post.php?post=100&action=edit",
@@ -18,12 +18,12 @@
 			"step": "installPlugin",
 			"pluginData": {
 				"resource": "git:directory",
-				"url": "https://github.com/aryanjasala/restore-one-block",
+				"url": "https://github.com/aryanjasala/restore-blocks-from-revisions",
 				"ref": "main"
 			},
 			"options": {
 				"activate": true,
-				"targetFolderName": "restore-one-block"
+				"targetFolderName": "restore-blocks-from-revisions"
 			}
 		},
 		{

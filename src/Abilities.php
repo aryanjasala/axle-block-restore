@@ -2,15 +2,15 @@
 /**
  * Abilities: find and restore single blocks for AI agents and other Abilities API clients.
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreOneBlock;
+namespace AryanX\RestoreBlocksFromRevisions;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Registers Restore One Block's abilities on WordPress 6.9 and later.
+ * Registers Restore Blocks from Revisions's abilities on WordPress 6.9 and later.
  *
  * In the editor, the plugin guesses which old block matches which current one.
  * An agent does not need the guess: it finds text that was deleted or changed,
@@ -23,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Abilities implements Service {
 
-	public const CATEGORY = 'restore-one-block';
+	public const CATEGORY = 'restore-blocks-from-revisions';
 
 	private const MATCHES = 50;
 
@@ -40,7 +40,7 @@ final class Abilities implements Service {
 	}
 
 	/**
-	 * Registers the Restore One Block category.
+	 * Registers the Restore Blocks from Revisions category.
 	 */
 	public function register_category(): void {
 		if ( ! function_exists( 'wp_register_ability_category' ) ) {
@@ -50,8 +50,8 @@ final class Abilities implements Service {
 		wp_register_ability_category(
 			self::CATEGORY,
 			array(
-				'label'       => __( 'Restore One Block', 'restore-one-block' ),
-				'description' => __( 'Find blocks that were deleted or changed in old revisions, and put one back without rolling back the whole post.', 'restore-one-block' ),
+				'label'       => __( 'Restore Blocks from Revisions', 'restore-blocks-from-revisions' ),
+				'description' => __( 'Find blocks that were deleted or changed in old revisions, and put one back without rolling back the whole post.', 'restore-blocks-from-revisions' ),
 			)
 		);
 	}
@@ -63,14 +63,14 @@ final class Abilities implements Service {
 		$post_id   = array(
 			'type'        => 'integer',
 			'minimum'     => 1,
-			'description' => __( 'ID of the post, page or other item.', 'restore-one-block' ),
+			'description' => __( 'ID of the post, page or other item.', 'restore-blocks-from-revisions' ),
 		);
 		$revisions = array(
 			'type'        => 'integer',
 			'minimum'     => 1,
 			'maximum'     => $this->max_revisions(),
 			'default'     => 20,
-			'description' => __( 'How many of the newest revisions to look through.', 'restore-one-block' ),
+			'description' => __( 'How many of the newest revisions to look through.', 'restore-blocks-from-revisions' ),
 		);
 		$path      = array(
 			'type'        => 'array',
@@ -79,7 +79,7 @@ final class Abilities implements Service {
 				'minimum' => 0,
 			),
 			'minItems'    => 1,
-			'description' => __( 'Block position from 0, one number per level: [2] is the third top-level block, [2, 0] the first block inside it.', 'restore-one-block' ),
+			'description' => __( 'Block position from 0, one number per level: [2] is the third top-level block, [2, 0] the first block inside it.', 'restore-blocks-from-revisions' ),
 		);
 		$found     = array(
 			'type'  => 'array',
@@ -102,8 +102,8 @@ final class Abilities implements Service {
 
 		$this->ability(
 			'list-revisions',
-			__( 'List revisions', 'restore-one-block' ),
-			__( 'Revisions of a post, newest first, with who saved each one.', 'restore-one-block' ),
+			__( 'List revisions', 'restore-blocks-from-revisions' ),
+			__( 'Revisions of a post, newest first, with who saved each one.', 'restore-blocks-from-revisions' ),
 			array(
 				'type'                 => 'object',
 				'properties'           => array(
@@ -132,8 +132,8 @@ final class Abilities implements Service {
 
 		$this->ability(
 			'find-deleted',
-			__( 'Find deleted blocks', 'restore-one-block' ),
-			__( 'Blocks whose text is in an old revision but no longer in the post, newest revision first. Each comes with the revision and path to pass to restore-block.', 'restore-one-block' ),
+			__( 'Find deleted blocks', 'restore-blocks-from-revisions' ),
+			__( 'Blocks whose text is in an old revision but no longer in the post, newest revision first. Each comes with the revision and path to pass to restore-block.', 'restore-blocks-from-revisions' ),
 			array(
 				'type'                 => 'object',
 				'properties'           => array(
@@ -150,8 +150,8 @@ final class Abilities implements Service {
 
 		$this->ability(
 			'find-text',
-			__( 'Find text in old revisions', 'restore-one-block' ),
-			__( 'Blocks in old revisions that contain the given text, newest first, and whether that block is still in the post.', 'restore-one-block' ),
+			__( 'Find text in old revisions', 'restore-blocks-from-revisions' ),
+			__( 'Blocks in old revisions that contain the given text, newest first, and whether that block is still in the post.', 'restore-blocks-from-revisions' ),
 			array(
 				'type'                 => 'object',
 				'properties'           => array(
@@ -172,8 +172,8 @@ final class Abilities implements Service {
 
 		$this->ability(
 			'restore-block',
-			__( 'Restore one block', 'restore-one-block' ),
-			__( 'Puts one block from an old revision back into the post: inserted at a top-level position (default: where it was), or replacing the block at a path. Saves the post, which makes a new revision, so it can be undone. Refuses while someone else has the post open in the editor, unless force is true.', 'restore-one-block' ),
+			__( 'Restore one block', 'restore-blocks-from-revisions' ),
+			__( 'Puts one block from an old revision back into the post: inserted at a top-level position (default: where it was), or replacing the block at a path. Saves the post, which makes a new revision, so it can be undone. Refuses while someone else has the post open in the editor, unless force is true.', 'restore-blocks-from-revisions' ),
 			array(
 				'type'                 => 'object',
 				'properties'           => array(
@@ -191,9 +191,9 @@ final class Abilities implements Service {
 					'position'    => array(
 						'type'        => 'integer',
 						'minimum'     => 0,
-						'description' => __( 'Insert: top-level position from 0. Default: the position it had in the revision.', 'restore-one-block' ),
+						'description' => __( 'Insert: top-level position from 0. Default: the position it had in the revision.', 'restore-blocks-from-revisions' ),
 					),
-					'target_path' => array_merge( $path, array( 'description' => __( 'Replace: path of the current block to replace. Default: the same path as in the revision.', 'restore-one-block' ) ) ),
+					'target_path' => array_merge( $path, array( 'description' => __( 'Replace: path of the current block to replace. Default: the same path as in the revision.', 'restore-blocks-from-revisions' ) ) ),
 					'force'       => array(
 						'type'    => 'boolean',
 						'default' => false,
@@ -301,12 +301,12 @@ final class Abilities implements Service {
 		$revision    = wp_get_post_revision( $revision_id );
 
 		if ( ! $post || ! $revision || (int) $revision->post_parent !== $post_id ) {
-			return new \WP_Error( 'restore_one_block_revision', __( 'That revision does not belong to this post.', 'restore-one-block' ) );
+			return new \WP_Error( 'restore_blocks_from_revisions_revision', __( 'That revision does not belong to this post.', 'restore-blocks-from-revisions' ) );
 		}
 
 		$block = $this->node_at( parse_blocks( $revision->post_content ), $path );
 		if ( ! $block ) {
-			return new \WP_Error( 'restore_one_block_path', __( 'That revision has no block at this path.', 'restore-one-block' ) );
+			return new \WP_Error( 'restore_blocks_from_revisions_path', __( 'That revision has no block at this path.', 'restore-blocks-from-revisions' ) );
 		}
 
 		if ( empty( $input['force'] ) ) {
@@ -317,9 +317,9 @@ final class Abilities implements Service {
 			if ( $editing ) {
 				$user = get_userdata( (int) $editing );
 				return new \WP_Error(
-					'restore_one_block_locked',
+					'restore_blocks_from_revisions_locked',
 					/* translators: %s: user name. */
-					sprintf( __( '%s has this post open in the editor, and saving now could overwrite their work. Try again later, or pass force.', 'restore-one-block' ), $user ? $user->display_name : __( 'Someone', 'restore-one-block' ) )
+					sprintf( __( '%s has this post open in the editor, and saving now could overwrite their work. Try again later, or pass force.', 'restore-blocks-from-revisions' ), $user ? $user->display_name : __( 'Someone', 'restore-blocks-from-revisions' ) )
 				);
 			}
 		}
@@ -328,7 +328,7 @@ final class Abilities implements Service {
 		if ( 'replace' === $mode ) {
 			$target = isset( $input['target_path'] ) ? array_map( 'intval', (array) $input['target_path'] ) : $path;
 			if ( ! $this->replace_at( $blocks, $target, $block ) ) {
-				return new \WP_Error( 'restore_one_block_target', __( 'The post has no block at the target path.', 'restore-one-block' ) );
+				return new \WP_Error( 'restore_blocks_from_revisions_target', __( 'The post has no block at the target path.', 'restore-blocks-from-revisions' ) );
 			}
 			$where = $target;
 		} else {
@@ -349,7 +349,7 @@ final class Abilities implements Service {
 		/**
 		 * Fires after a block from an old revision is saved back into a post.
 		 *
-		 * The JavaScript `restoreOneBlock.restored` action is the editor's
+		 * The JavaScript `restoreBlocksFromRevisions.restored` action is the editor's
 		 * counterpart; this one covers restores made through the abilities.
 		 *
 		 * @param int    $post_id     Post.
@@ -357,7 +357,7 @@ final class Abilities implements Service {
 		 * @param int    $revision_id Revision it came from.
 		 * @param string $mode        insert or replace.
 		 */
-		do_action( 'restore_one_block_restored', $post_id, $block, $revision_id, $mode );
+		do_action( 'restore_blocks_from_revisions_restored', $post_id, $block, $revision_id, $mode );
 
 		$latest = $this->revisions( $post_id, 1 );
 
@@ -371,7 +371,7 @@ final class Abilities implements Service {
 	}
 
 	/**
-	 * Permission: editing the post, in a post type that has Restore One Block.
+	 * Permission: editing the post, in a post type that has Restore Blocks from Revisions.
 	 *
 	 * @param array|null $input Ability input.
 	 * @return bool
@@ -393,7 +393,7 @@ final class Abilities implements Service {
 		 *
 		 * @param int $max Default 50.
 		 */
-		return max( 1, (int) apply_filters( 'restore_one_block_max_revisions', 50 ) );
+		return max( 1, (int) apply_filters( 'restore_blocks_from_revisions_max_revisions', 50 ) );
 	}
 
 	/**
@@ -601,7 +601,7 @@ final class Abilities implements Service {
 	}
 
 	/**
-	 * Registers one ability in the Restore One Block category.
+	 * Registers one ability in the Restore Blocks from Revisions category.
 	 *
 	 * @param string   $name        Name without the namespace.
 	 * @param string   $label       Label.

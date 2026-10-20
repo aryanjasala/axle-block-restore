@@ -1,4 +1,4 @@
-=== Restore One Block ===
+=== Restore Blocks from Revisions ===
 Contributors: aryanjasala
 Tags: revisions, block editor, undo, restore, gutenberg
 Requires at least: 6.6
@@ -14,7 +14,7 @@ Bring back one block from an old revision, such as a deleted paragraph or an ear
 
 WordPress revisions are all or nothing. If someone deleted a paragraph last week and the post has been edited ten times since, "Restore This Revision" brings the paragraph back but throws away the ten edits. The usual workaround is copying text out of the revisions screen by hand, which loses the block's formatting and settings.
 
-Restore One Block works inside the block editor and restores single blocks, with all their settings.
+Restore Blocks from Revisions works inside the block editor and restores single blocks, with all their settings.
 
 **Restore one block to an earlier version**
 

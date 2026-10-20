@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Restore One Block does not work the way the docs say.
+description: Something in Restore Blocks from Revisions does not work the way the docs say.
 labels: [bug]
 body:
   - type: textarea
@@ -22,7 +22,7 @@ body:
   - type: input
     id: plugin
     attributes:
-      label: Restore One Block version
+      label: Restore Blocks from Revisions version
       placeholder: "1.1.0"
     validations:
       required: true

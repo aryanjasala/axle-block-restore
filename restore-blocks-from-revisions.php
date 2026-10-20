@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       Restore One Block
- * Plugin URI:        https://wordpress.org/plugins/restore-one-block/
+ * Plugin Name:       Restore Blocks from Revisions
+ * Plugin URI:        https://wordpress.org/plugins/restore-blocks-from-revisions/
  * Description:       Restore a single block from an old revision instead of rolling back the whole post. Bring back a deleted paragraph, or an earlier version of one section, without losing later edits.
  * Version:           1.3.0
  * Requires at least: 6.6
@@ -10,19 +10,19 @@
  * Author URI:        https://profiles.wordpress.org/aryanjasala/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       restore-one-block
+ * Text Domain:       restore-blocks-from-revisions
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreOneBlock;
+namespace AryanX\RestoreBlocksFromRevisions;
 
 defined( 'ABSPATH' ) || exit;
 
 const VERSION     = '1.3.0';
 const PLUGIN_FILE = __FILE__;
 
-// PSR-4: AryanX\RestoreOneBlock\Foo\Bar lives in src/Foo/Bar.php.
+// PSR-4: AryanX\RestoreBlocksFromRevisions\Foo\Bar lives in src/Foo/Bar.php.
 spl_autoload_register(
 	static function ( $class_name ) {
 		$prefix = __NAMESPACE__ . '\\';

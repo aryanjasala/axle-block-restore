@@ -1,5 +1,5 @@
 /**
- * Restore One Block: adds "Restore from a revision…" to each block's menu and
+ * Restore Blocks from Revisions: adds "Restore from a revision…" to each block's menu and
  * "Restore blocks from a revision" to the editor's main menu.
  */
 ( function ( wp, RestoreModal ) {
@@ -15,7 +15,7 @@
 	const { applyFilters } = wp.hooks;
 	const PluginMoreMenuItem = ( wp.editor && wp.editor.PluginMoreMenuItem ) || ( wp.editPost && wp.editPost.PluginMoreMenuItem );
 
-	function RestoreOneBlock() {
+	function RestoreBlocksFromRevisions() {
 		const [ open, setOpen ] = useState( null );
 
 		return el(
@@ -25,7 +25,7 @@
 				el(
 					PluginMoreMenuItem,
 					{ icon: 'backup', onClick: () => setOpen( { clientId: null } ) },
-					__( 'Restore blocks from a revision', 'restore-one-block' )
+					__( 'Restore blocks from a revision', 'restore-blocks-from-revisions' )
 				),
 			el( BlockSettingsMenuControls, null, ( fillProps ) => {
 				const ids = fillProps.selectedClientIds || [];
@@ -39,7 +39,7 @@
 				 * @param {boolean} canRestore Default true.
 				 * @param {Object}  block      The selected block.
 				 */
-				if ( ! applyFilters( 'restoreOneBlock.canRestore', true, select( 'core/block-editor' ).getBlock( ids[ 0 ] ) ) ) {
+				if ( ! applyFilters( 'restoreBlocksFromRevisions.canRestore', true, select( 'core/block-editor' ).getBlock( ids[ 0 ] ) ) ) {
 					return null;
 				}
 				return el(
@@ -51,12 +51,12 @@
 							fillProps.onClose();
 						},
 					},
-					__( 'Restore from a revision…', 'restore-one-block' )
+					__( 'Restore from a revision…', 'restore-blocks-from-revisions' )
 				);
 			} ),
 			open && el( RestoreModal, { clientId: open.clientId, onClose: () => setOpen( null ) } )
 		);
 	}
 
-	registerPlugin( 'restore-one-block', { render: RestoreOneBlock } );
-} )( window.wp, window.restoreOneBlock.RestoreModal );
+	registerPlugin( 'restore-blocks-from-revisions', { render: RestoreBlocksFromRevisions } );
+} )( window.wp, window.restoreBlocksFromRevisions.RestoreModal );

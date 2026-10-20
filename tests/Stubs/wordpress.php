@@ -2,7 +2,7 @@
 /**
  * Minimal stand-ins for WordPress classes and constants used in unit tests.
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
 // phpcs:ignoreFile

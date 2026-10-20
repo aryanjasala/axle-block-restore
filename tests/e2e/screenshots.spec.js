@@ -29,7 +29,7 @@ test.describe( 'Screenshots', () => {
 		await openEditor( page, postId );
 		await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 		await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
-		await expect( page.locator( '.rob-badge--missing' ) ).toBeVisible();
+		await expect( page.locator( '.rbr-badge--missing' ) ).toBeVisible();
 		await shot( page, 1 );
 	} );
 
@@ -39,9 +39,9 @@ test.describe( 'Screenshots', () => {
 		await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
 		await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
 		await page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ).click();
-		const best = page.locator( '.rob-card' ).first();
+		const best = page.locator( '.rbr-card' ).first();
 		await best.getByRole( 'button', { name: 'Show changes' } ).click();
-		await expect( best.locator( '.rob-diff' ) ).toBeVisible();
+		await expect( best.locator( '.rbr-diff' ) ).toBeVisible();
 		await shot( page, 2 );
 	} );
 
@@ -50,7 +50,7 @@ test.describe( 'Screenshots', () => {
 		await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 		await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
 		await page.getByRole( 'searchbox', { name: 'Find text in old revisions' } ).fill( 'starter back' );
-		await expect( page.locator( '.rob-result' ) ).toHaveCount( 1 );
+		await expect( page.locator( '.rbr-result' ) ).toHaveCount( 1 );
 		await shot( page, 3 );
 	} );
 } );

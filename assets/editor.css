@@ -1,13 +1,13 @@
-.rob-modal .components-modal__content {
+.rbr-modal .components-modal__content {
 	padding-bottom: 0;
 }
 
-.rob-search {
+.rbr-search {
 	margin-bottom: 16px;
 	max-width: 520px;
 }
 
-.rob-layout {
+.rbr-layout {
 	display: grid;
 	grid-template-columns: minmax(200px, 260px) 1fr;
 	gap: 24px;
@@ -15,7 +15,7 @@
 }
 
 /* Revision list */
-.rob-revisions {
+.rbr-revisions {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
@@ -25,7 +25,7 @@
 	overflow-y: auto;
 }
 
-.rob-revisions .rob-revision {
+.rbr-revisions .rbr-revision {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
@@ -38,25 +38,25 @@
 	white-space: normal;
 }
 
-.rob-revision__date {
+.rbr-revision__date {
 	font-weight: 500;
 }
 
-.rob-revision__meta {
+.rbr-revision__meta {
 	font-size: 12px;
 	color: #757575;
 }
 
-.rob-revisions .rob-revision.is-selected {
+.rbr-revisions .rbr-revision.is-selected {
 	background: var(--wp-admin-theme-color, #3858e9);
 	color: #fff;
 }
 
-.rob-revisions .rob-revision.is-selected .rob-revision__meta {
+.rbr-revisions .rbr-revision.is-selected .rbr-revision__meta {
 	color: rgba(255, 255, 255, 0.85);
 }
 
-.rob-tag {
+.rbr-tag {
 	display: inline-block;
 	margin-right: 6px;
 	padding: 0 5px;
@@ -68,18 +68,18 @@
 }
 
 /* Blocks of the selected revision */
-.rob-blocks {
+.rbr-blocks {
 	max-height: 66vh;
 	overflow-y: auto;
 	padding: 0 4px 24px 0;
 }
 
-.rob-summary {
+.rbr-summary {
 	margin-top: 0;
 	color: #757575;
 }
 
-.rob-card {
+.rbr-card {
 	border: 1px solid #e0e0e0;
 	border-radius: 4px;
 	padding: 12px 16px;
@@ -87,40 +87,40 @@
 	transition: box-shadow 0.2s;
 }
 
-.rob-card.is-focused {
+.rbr-card.is-focused {
 	border-color: var(--wp-admin-theme-color, #3858e9);
 	box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #3858e9);
 }
 
-.rob-card__head {
+.rbr-card__head {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
-.rob-card__excerpt {
+.rbr-card__excerpt {
 	margin: 6px 0 8px;
 }
 
-.rob-card__excerpt.is-empty {
+.rbr-card__excerpt.is-empty {
 	color: #757575;
 	font-style: italic;
 }
 
-.rob-card__preview {
+.rbr-card__preview {
 	max-height: 260px;
 	overflow: hidden;
 	border: 1px solid #f0f0f0;
 	margin-bottom: 8px;
 }
 
-.rob-card__actions {
+.rbr-card__actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
 }
 
-.rob-diff {
+.rbr-diff {
 	margin: 0 0 10px;
 	padding: 8px 12px;
 	background: #f6f7f7;
@@ -128,35 +128,35 @@
 	line-height: 1.7;
 }
 
-.rob-diff del,
-.rob-diff ins {
+.rbr-diff del,
+.rbr-diff ins {
 	padding: 1px 2px;
 	border-radius: 2px;
 }
 
-.rob-diff del + ins {
+.rbr-diff del + ins {
 	margin-left: 3px;
 }
 
-.rob-diff del {
+.rbr-diff del {
 	background: #fcf0f1;
 	color: #8a2424;
 	text-decoration: line-through;
 }
 
-.rob-diff ins {
+.rbr-diff ins {
 	background: #edfaef;
 	color: #00450c;
 	text-decoration: none;
 }
 
-.rob-modal mark {
+.rbr-modal mark {
 	background: #fcf9e8;
 	box-shadow: 0 0 0 1px #dba617;
 	color: inherit;
 }
 
-.rob-badge {
+.rbr-badge {
 	font-size: 11px;
 	line-height: 1;
 	padding: 4px 6px;
@@ -165,30 +165,30 @@
 	color: #1e1e1e;
 }
 
-.rob-badge--missing {
+.rbr-badge--missing {
 	background: #fcf0f1;
 	color: #8a2424;
 }
 
-.rob-badge--changed {
+.rbr-badge--changed {
 	background: #fcf9e8;
 	color: #614200;
 }
 
-.rob-badge--match {
+.rbr-badge--match {
 	background: #edfaef;
 	color: #00450c;
 }
 
 /* Search results */
-.rob-results {
+.rbr-results {
 	margin: 0;
 	padding-bottom: 24px;
 	max-height: 66vh;
 	overflow-y: auto;
 }
 
-.rob-result {
+.rbr-result {
 	border: 1px solid #e0e0e0;
 	border-radius: 4px;
 	padding: 10px 16px;
@@ -196,26 +196,26 @@
 	list-style: none;
 }
 
-.rob-result__text {
+.rbr-result__text {
 	margin: 0 0 4px;
 }
 
-.rob-result__meta {
+.rbr-result__meta {
 	margin: 0 0 8px;
 	color: #757575;
 	font-size: 12px;
 }
 
-.rob-search-empty {
+.rbr-search-empty {
 	color: #757575;
 }
 
 @media (max-width: 600px) {
-	.rob-layout {
+	.rbr-layout {
 		grid-template-columns: 1fr;
 	}
 
-	.rob-revisions {
+	.rbr-revisions {
 		border-right: 0;
 		border-bottom: 1px solid #e0e0e0;
 		padding: 0 0 12px;

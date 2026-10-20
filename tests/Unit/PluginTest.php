@@ -2,13 +2,13 @@
 /**
  * Tests for which post types get the editor tools, and the revision author field.
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreOneBlock\Tests\Unit;
+namespace AryanX\RestoreBlocksFromRevisions\Tests\Unit;
 
-use AryanX\RestoreOneBlock\Plugin;
-use AryanX\RestoreOneBlock\Rest\RevisionAuthor;
+use AryanX\RestoreBlocksFromRevisions\Plugin;
+use AryanX\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 
@@ -45,7 +45,7 @@ final class PluginTest extends TestCase {
 
 	public function test_the_filter_can_narrow_the_list_but_not_add_types_without_revisions(): void {
 		$this->post_types_exist();
-		Filters\expectApplied( 'restore_one_block_post_types' )->andReturn( array( 'post', 'attachment', 'product' ) );
+		Filters\expectApplied( 'restore_blocks_from_revisions_post_types' )->andReturn( array( 'post', 'attachment', 'product' ) );
 
 		$this->assertSame( array( 'post' ), Plugin::post_types() );
 	}

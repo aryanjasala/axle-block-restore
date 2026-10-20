@@ -1,15 +1,15 @@
 /**
- * Restore One Block: pure helpers for matching blocks across revisions.
+ * Restore Blocks from Revisions: pure helpers for matching blocks across revisions.
  *
  * No WordPress dependencies, so the same file runs in the editor (as
- * window.restoreOneBlock.matching) and in Node unit tests (as a module).
+ * window.restoreBlocksFromRevisions.matching) and in Node unit tests (as a module).
  */
 ( function ( root, factory ) {
 	if ( typeof module === 'object' && module.exports ) {
 		module.exports = factory();
 	} else {
-		root.restoreOneBlock = root.restoreOneBlock || {};
-		root.restoreOneBlock.matching = factory();
+		root.restoreBlocksFromRevisions = root.restoreBlocksFromRevisions || {};
+		root.restoreBlocksFromRevisions.matching = factory();
 	}
 } )( typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
