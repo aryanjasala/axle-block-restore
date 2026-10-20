@@ -1,4 +1,4 @@
-const { test, expect, openEditor, wp } = require( './utils' );
+const { test, expect, openEditor, wp, wpEval } = require( './utils' );
 
 const p = ( text ) => `<!-- wp:paragraph --><p>${ text }</p><!-- /wp:paragraph -->`;
 const heading = '<!-- wp:heading --><h2 class="wp-block-heading">Ingredients</h2><!-- /wp:heading -->';
@@ -132,6 +132,8 @@ test.describe( 'Restore One Block', () => {
 
 		const listed = await rest( 'GET', '/wp-abilities/v1/abilities?category=restore-one-block' );
 		expect( listed.body.map( ( ability ) => ability.name ).sort() ).toEqual( [ 'restore-one-block/find-deleted', 'restore-one-block/find-text', 'restore-one-block/list-revisions', 'restore-one-block/restore-block' ] );
+		// MCP clients only list abilities marked public.
+		expect( JSON.parse( wpEval( `echo wp_json_encode( array_values( array_filter( array_map( function ( $ability ) { $meta = $ability->get_meta(); return ( ! empty( $meta['public'] ) && ! empty( $meta['mcp']['public'] ) ) ? '' : $ability->get_name(); }, wp_get_abilities() ), function ( $name ) { return 0 === strpos( $name, 'restore-one-block/' ); } ) ) );` ) ) ).toEqual( [] );
 
 		const revisions = ( await run( 'list-revisions', 'GET', { post_id: postId } ) ).body;
 		expect( revisions.length ).toBeGreaterThanOrEqual( 3 );
