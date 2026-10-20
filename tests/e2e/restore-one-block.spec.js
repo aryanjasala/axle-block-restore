@@ -136,9 +136,18 @@ test.describe( 'Restore One Block', () => {
 		await expect( options.nth( 2 ) ).toContainText( '4 differences' );
 
 		await expect( options.nth( 1 ) ).toHaveAttribute( 'aria-selected', 'true' );
+		// Only the selected revision is in the tab order, and the arrow keys move the focus with it.
+		await expect( options.nth( 1 ) ).toHaveAttribute( 'tabindex', '0' );
+		await expect( options.nth( 0 ) ).toHaveAttribute( 'tabindex', '-1' );
 		await options.nth( 1 ).focus();
 		await page.keyboard.press( 'ArrowDown' );
 		await expect( options.nth( 2 ) ).toHaveAttribute( 'aria-selected', 'true' );
+		await expect( options.nth( 2 ) ).toBeFocused();
+		await page.keyboard.press( 'Home' );
+		await expect( options.nth( 0 ) ).toBeFocused();
+		await page.keyboard.press( 'End' );
+		await expect( options.nth( 2 ) ).toBeFocused();
+		await page.keyboard.press( 'ArrowDown' );
 		await expect( modal.locator( '.rob-summary' ) ).toContainText( '5 blocks in this revision' );
 	} );
 } );

@@ -17,7 +17,6 @@
 	const { addQueryArgs } = wp.url;
 	const { dateI18n, getSettings: getDateSettings } = wp.date;
 
-	const TEXT_DOMAIN = 'restore-one-block';
 	const PER_PAGE = 50;
 	const MAX_CANDIDATES = 6;
 
@@ -85,10 +84,14 @@
 				} ),
 			} )
 				.then( ( items ) => {
-					setRevisions( ( previous ) => previous.concat( items.map( prepare ) ) );
+					// A revision saved while the window is open shifts the pages, so skip ones already listed.
+					setRevisions( ( previous ) => {
+						const seen = new Set( previous.map( ( revision ) => revision.id ) );
+						return previous.concat( items.filter( ( item ) => ! seen.has( item.id ) ).map( prepare ) );
+					} );
 					setHasMore( items.length === PER_PAGE );
 				} )
-				.catch( ( fetchError ) => setError( fetchError.message || __( 'Could not load revisions.', TEXT_DOMAIN ) ) )
+				.catch( ( fetchError ) => setError( fetchError.message || __( 'Could not load revisions.', 'restore-one-block' ) ) )
 				.finally( () => setLoading( false ) );
 		}, [ post.id, post.restBase, post.restNamespace, page ] );
 
@@ -132,7 +135,7 @@
 	function DiffView( { before, after } ) {
 		return el(
 			'p',
-			{ className: 'rob-diff', 'aria-label': __( 'Changes this restore would make', TEXT_DOMAIN ) },
+			{ className: 'rob-diff', 'aria-label': __( 'Changes this restore would make', 'restore-one-block' ) },
 			matching.wordDiff( before, after ).map( ( part, index ) => {
 				if ( 'same' === part.type ) {
 					return part.text;
@@ -173,15 +176,15 @@
 			),
 			item.text
 				? el( 'p', { className: 'rob-card__excerpt' }, el( Highlight, { text: matching.excerpt( item.text, query, 240 ), query } ) )
-				: el( 'p', { className: 'rob-card__excerpt is-empty' }, __( 'No text in this block.', TEXT_DOMAIN ) ),
+				: el( 'p', { className: 'rob-card__excerpt is-empty' }, __( 'No text in this block.', 'restore-one-block' ) ),
 			'diff' === view && el( DiffView, { before: compareText, after: item.text } ),
 			'preview' === view && el( 'div', { className: 'rob-card__preview' }, el( BlockPreview, { blocks: previewBlocks, viewportWidth: 800 } ) ),
 			el(
 				'div',
 				{ className: 'rob-card__actions' },
 				actions,
-				canDiff && el( Button, { variant: 'tertiary', isPressed: 'diff' === view, onClick: () => toggle( 'diff' ) }, __( 'Show changes', TEXT_DOMAIN ) ),
-				el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', TEXT_DOMAIN ) )
+				canDiff && el( Button, { variant: 'tertiary', isPressed: 'diff' === view, onClick: () => toggle( 'diff' ) }, __( 'Show changes', 'restore-one-block' ) ),
+				el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'restore-one-block' ) )
 			)
 		);
 	}
@@ -200,16 +203,16 @@
 
 		if ( ! ranked.length ) {
 			/* translators: %s: block type, e.g. "Paragraph". */
-			return el( 'p', null, sprintf( __( 'This revision has no %s blocks.', TEXT_DOMAIN ), target.title ) );
+			return el( 'p', null, sprintf( __( 'This revision has no %s blocks.', 'restore-one-block' ), target.title ) );
 		}
 
 		return el(
 			Fragment,
 			null,
-			! different.length && el( Notice, { status: 'info', isDismissible: false }, __( 'This block is the same in this revision as it is now.', TEXT_DOMAIN ) ),
+			! different.length && el( Notice, { status: 'info', isDismissible: false }, __( 'This block is the same in this revision as it is now.', 'restore-one-block' ) ),
 			ranked.length !== different.length &&
 				el( ToggleControl, {
-					label: __( 'Also show versions that match the current block', TEXT_DOMAIN ),
+					label: __( 'Also show versions that match the current block', 'restore-one-block' ),
 					checked: showSame,
 					onChange: setShowSame,
 					__nextHasNoMarginBottom: true,
@@ -222,17 +225,17 @@
 					focused: focusText === item.text,
 					compareText: target.text,
 					status: item.same
-						? { type: 'same', label: __( 'Same as now', TEXT_DOMAIN ) }
+						? { type: 'same', label: __( 'Same as now', 'restore-one-block' ) }
 						: 0 === index && item.samePosition
-						? { type: 'match', label: __( 'Best match', TEXT_DOMAIN ) }
+						? { type: 'match', label: __( 'Best match', 'restore-one-block' ) }
 						: null,
 					actions: item.same
 						? null
 						: el(
 								Fragment,
 								null,
-								el( Button, { variant: 'primary', onClick: () => onReplace( item.block ) }, __( 'Replace current block', TEXT_DOMAIN ) ),
-								el( Button, { variant: 'secondary', onClick: () => onInsertAfter( item.block ) }, __( 'Insert below it', TEXT_DOMAIN ) )
+								el( Button, { variant: 'primary', onClick: () => onReplace( item.block ) }, __( 'Replace current block', 'restore-one-block' ) ),
+								el( Button, { variant: 'secondary', onClick: () => onInsertAfter( item.block ) }, __( 'Insert below it', 'restore-one-block' ) )
 						  ),
 				} )
 			)
@@ -252,9 +255,9 @@
 		const differing = items.filter( ( row ) => 'same' !== row.status );
 		const shown = showAll ? items : differing;
 		const labels = {
-			same: __( 'Same as now', TEXT_DOMAIN ),
-			changed: __( 'Changed since', TEXT_DOMAIN ),
-			missing: __( 'Not in the post now', TEXT_DOMAIN ),
+			same: __( 'Same as now', 'restore-one-block' ),
+			changed: __( 'Changed since', 'restore-one-block' ),
+			missing: __( 'Not in the post now', 'restore-one-block' ),
 		};
 
 		return el(
@@ -265,18 +268,18 @@
 				{ className: 'rob-summary' },
 				sprintf(
 					/* translators: 1: blocks in the revision, 2: how many differ from now. */
-					_n( '%1$d block in this revision, %2$d different from now.', '%1$d blocks in this revision, %2$d different from now.', items.length, TEXT_DOMAIN ),
+					_n( '%1$d block in this revision, %2$d different from now.', '%1$d blocks in this revision, %2$d different from now.', items.length, 'restore-one-block' ),
 					items.length,
 					differing.length
 				)
 			),
 			el( ToggleControl, {
-				label: __( 'Show unchanged blocks too', TEXT_DOMAIN ),
+				label: __( 'Show unchanged blocks too', 'restore-one-block' ),
 				checked: showAll,
 				onChange: setShowAll,
 				__nextHasNoMarginBottom: true,
 			} ),
-			! shown.length && el( Notice, { status: 'info', isDismissible: false }, __( 'Every block in this revision is the same as in the post now.', TEXT_DOMAIN ) ),
+			! shown.length && el( Notice, { status: 'info', isDismissible: false }, __( 'Every block in this revision is the same as in the post now.', 'restore-one-block' ) ),
 			shown.map( ( row ) =>
 				el( BlockCard, {
 					key: row.index,
@@ -292,11 +295,11 @@
 									Fragment,
 									null,
 									'changed' === row.status &&
-										el( Button, { variant: 'primary', onClick: () => onReplaceAt( row.item.block, row.index ) }, __( 'Replace current version', TEXT_DOMAIN ) ),
+										el( Button, { variant: 'primary', onClick: () => onReplaceAt( row.item.block, row.index ) }, __( 'Replace current version', 'restore-one-block' ) ),
 									el(
 										Button,
 										{ variant: 'missing' === row.status ? 'primary' : 'secondary', onClick: () => onInsertAt( row.item.block, row.index ) },
-										'missing' === row.status ? __( 'Restore it here', TEXT_DOMAIN ) : __( 'Insert as a copy', TEXT_DOMAIN )
+										'missing' === row.status ? __( 'Restore it here', 'restore-one-block' ) : __( 'Insert as a copy', 'restore-one-block' )
 									)
 							  ),
 				} )
@@ -312,12 +315,12 @@
 	 */
 	function SearchResults( { results, revisionsById, labelFor, query, onPick } ) {
 		if ( ! results.length ) {
-			return el( 'p', { className: 'rob-search-empty' }, __( 'No block in the loaded revisions contains that text.', TEXT_DOMAIN ) );
+			return el( 'p', { className: 'rob-search-empty' }, __( 'No block in the loaded revisions contains that text.', 'restore-one-block' ) );
 		}
 
 		return el(
 			'ul',
-			{ className: 'rob-results', 'aria-label': __( 'Search results', TEXT_DOMAIN ) },
+			{ className: 'rob-results', 'aria-label': __( 'Search results', 'restore-one-block' ) },
 			results.map( ( result, index ) => {
 				const newest = revisionsById[ result.revisionIds[ 0 ] ];
 				const type = getBlockType( result.name );
@@ -331,13 +334,13 @@
 						{ className: 'rob-result__meta' },
 						sprintf(
 							/* translators: 1: block type, 2: number of revisions, 3: date of the newest one. */
-							_n( '%1$s in %2$d revision, newest %3$s', '%1$s in %2$d revisions, newest %3$s', result.revisionIds.length, TEXT_DOMAIN ),
+							_n( '%1$s in %2$d revision, newest %3$s', '%1$s in %2$d revisions, newest %3$s', result.revisionIds.length, 'restore-one-block' ),
 							type ? type.title : result.name,
 							result.revisionIds.length,
 							labelFor( newest, true )
 						)
 					),
-					el( Button, { variant: 'secondary', onClick: () => onPick( result ) }, __( 'Show in revision', TEXT_DOMAIN ) )
+					el( Button, { variant: 'secondary', onClick: () => onPick( result ) }, __( 'Show in revision', 'restore-one-block' ) )
 				);
 			} )
 		);
@@ -383,7 +386,13 @@
 		const { createSuccessNotice } = useDispatch( 'core/notices' );
 		const { revisions, loading, error, hasMore, loadMore } = useRevisions( data.post );
 		const [ selectedId, setSelectedId ] = useState( null );
+		const [ input, setInput ] = useState( '' );
 		const [ query, setQuery ] = useState( '' );
+		// Searching every revision on each keystroke lags on long posts, so wait for a pause in typing.
+		useEffect( () => {
+			const timer = setTimeout( () => setQuery( input ), 200 );
+			return () => clearTimeout( timer );
+		}, [ input ] );
 		const [ focusText, setFocusText ] = useState( '' );
 
 		const current = useMemo( () => data.blocks.map( describe ), [ data.blocks ] );
@@ -435,22 +444,35 @@
 		};
 
 		const selected = revisionsById[ selectedId ];
-		const restored = __( 'Block restored. Save the post to keep it, or press Ctrl+Z (⌘Z) to undo.', TEXT_DOMAIN );
+		const restored = __( 'Block restored. Save the post to keep it, or press Ctrl+Z (⌘Z) to undo.', 'restore-one-block' );
 		const done = () => {
 			createSuccessNotice( restored, { type: 'snackbar' } );
 			onClose();
 		};
 
+		// Arrow keys, Home and End move both the selection and the focus (roving tabindex).
 		const moveSelection = ( event ) => {
-			if ( 'ArrowDown' !== event.key && 'ArrowUp' !== event.key ) {
+			const index = revisions.findIndex( ( revision ) => revision.id === selectedId );
+			const targets = {
+				ArrowDown: index + 1,
+				ArrowUp: index - 1,
+				Home: 0,
+				End: revisions.length - 1,
+			};
+			if ( ! ( event.key in targets ) ) {
 				return;
 			}
 			event.preventDefault();
-			const index = revisions.findIndex( ( revision ) => revision.id === selectedId );
-			const next = revisions[ index + ( 'ArrowDown' === event.key ? 1 : -1 ) ];
+			const next = revisions[ targets[ event.key ] ];
 			if ( next ) {
 				setSelectedId( next.id );
 				setFocusText( '' );
+				window.requestAnimationFrame( () => {
+					const option = document.getElementById( 'rob-revision-' + next.id );
+					if ( option ) {
+						option.focus();
+					}
+				} );
 			}
 		};
 
@@ -458,7 +480,7 @@
 		if ( error ) {
 			body = el( Notice, { status: 'error', isDismissible: false }, error );
 		} else if ( ! loading && ! revisions.length ) {
-			body = el( 'p', null, __( 'This post has no revisions yet. WordPress saves one each time the post is updated.', TEXT_DOMAIN ) );
+			body = el( 'p', null, __( 'This post has no revisions yet. WordPress saves one each time the post is updated.', 'restore-one-block' ) );
 		} else if ( ! selected ) {
 			body = el( Spinner );
 		} else if ( target ) {
@@ -502,8 +524,8 @@
 			{
 				title: target
 					/* translators: %s: block type, e.g. "Paragraph". */
-					? sprintf( __( 'Restore this %s from a revision', TEXT_DOMAIN ), target.title )
-					: __( 'Restore blocks from a revision', TEXT_DOMAIN ),
+					? sprintf( __( 'Restore this %s from a revision', 'restore-one-block' ), target.title )
+					: __( 'Restore blocks from a revision', 'restore-one-block' ),
 				onRequestClose: onClose,
 				size: 'large',
 				className: 'rob-modal',
@@ -512,12 +534,12 @@
 				'div',
 				{ className: 'rob-search' },
 				el( SearchControl, {
-					label: __( 'Find text in old revisions', TEXT_DOMAIN ),
+					label: __( 'Find text in old revisions', 'restore-one-block' ),
 					placeholder: target
-						? __( 'Find an old version of this block by its text…', TEXT_DOMAIN )
-						: __( 'Find deleted or changed text…', TEXT_DOMAIN ),
-					value: query,
-					onChange: setQuery,
+						? __( 'Find an old version of this block by its text…', 'restore-one-block' )
+						: __( 'Find deleted or changed text…', 'restore-one-block' ),
+					value: input,
+					onChange: setInput,
 					__nextHasNoMarginBottom: true,
 				} )
 			),
@@ -530,6 +552,7 @@
 						onPick: ( result ) => {
 							setSelectedId( result.revisionIds[ 0 ] );
 							setFocusText( result.text );
+							setInput( '' );
 							setQuery( '' );
 						},
 				  } )
@@ -541,8 +564,7 @@
 							{
 								className: 'rob-revisions',
 								role: 'listbox',
-								'aria-label': __( 'Revisions', TEXT_DOMAIN ),
-								tabIndex: -1,
+								'aria-label': __( 'Revisions', 'restore-one-block' ),
 								onKeyDown: moveSelection,
 							},
 							revisions.map( ( revision ) => {
@@ -553,8 +575,11 @@
 									Button,
 									{
 										key: revision.id,
+										id: 'rob-revision-' + revision.id,
 										role: 'option',
 										'aria-selected': revision.id === selectedId,
+										// Only the selected option is in the tab order; the arrow keys reach the rest.
+										tabIndex: revision.id === selectedId ? 0 : -1,
 										className: 'rob-revision' + ( revision.id === selectedId ? ' is-selected' : '' ),
 										onClick: () => {
 											setSelectedId( revision.id );
@@ -565,16 +590,16 @@
 									el(
 										'span',
 										{ className: 'rob-revision__meta' },
-										isAutosave && el( 'span', { className: 'rob-tag' }, __( 'Autosave', TEXT_DOMAIN ) ),
+										isAutosave && el( 'span', { className: 'rob-tag' }, __( 'Autosave', 'restore-one-block' ) ),
 										count
 											/* translators: %d: number of differences. */
-											? sprintf( _n( '%d difference', '%d differences', count, TEXT_DOMAIN ), count )
-											: __( 'Same as now', TEXT_DOMAIN )
+											? sprintf( _n( '%d difference', '%d differences', count, 'restore-one-block' ), count )
+											: __( 'Same as now', 'restore-one-block' )
 									)
 								);
 							} ),
 							loading && el( Spinner ),
-							hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', TEXT_DOMAIN ) )
+							hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', 'restore-one-block' ) )
 						),
 						el( 'div', { className: 'rob-blocks' }, body )
 				  )
