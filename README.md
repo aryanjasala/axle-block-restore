@@ -1,3 +1,5 @@
+<p align="center"><img src=".wordpress-org/icon-256x256.png" alt="" width="88"></p>
+
 <h1 align="center">Restore One Block</h1>
 
 <p align="center">
@@ -17,7 +19,7 @@
 <p align="center">Restore a single block from an old revision instead of rolling back the whole post.</p>
 
 <p align="center">
-  <img src=".wordpress-org/screenshot-2.png" alt="Picking an earlier version of one block, with its changes highlighted" width="880">
+  <img src=".github/media/demo.gif" alt="Bringing one paragraph back to an older version after a look at the changes, then restoring a deleted paragraph" width="880">
 </p>
 
 ---
@@ -59,6 +61,9 @@ There is no build step and nothing is stored: revisions are read through the RES
 <table>
   <tr>
     <td width="50%" valign="top"><img src=".wordpress-org/screenshot-1.png" alt="Restoring a deleted paragraph from a revision"><br><sub>Restoring a deleted paragraph from a revision</sub></td>
+    <td width="50%" valign="top"><img src=".wordpress-org/screenshot-2.png" alt="Picking an earlier version of one block, with its changes highlighted"><br><sub>Picking an earlier version of one block, with its changes highlighted</sub></td>
+  </tr>
+  <tr>
     <td width="50%" valign="top"><img src=".wordpress-org/screenshot-3.png" alt="Finding deleted text across revisions"><br><sub>Finding deleted text across revisions</sub></td>
   </tr>
 </table>
