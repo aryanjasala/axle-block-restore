@@ -34,7 +34,7 @@ async function openPostModal( page ) {
 	await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 	await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
 	const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
-	await expect( modal.locator( '.rob-revision' ).first() ).toBeVisible();
+	await expect( modal.locator( '.rbr-revision' ).first() ).toBeVisible();
 	return modal;
 }
 
@@ -43,20 +43,20 @@ async function openBlockModal( page, clientId ) {
 	await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
 	await page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ).click();
 	const modal = page.getByRole( 'dialog', { name: /^Restore this .* from a revision$/ } );
-	await expect( modal.locator( '.rob-revision' ).first() ).toBeVisible();
+	await expect( modal.locator( '.rbr-revision' ).first() ).toBeVisible();
 	return modal;
 }
 
-test.describe( 'Restore One Block', () => {
+test.describe( 'Restore Blocks from Revisions', () => {
 	test( 'brings a deleted paragraph back to where it was, and the save keeps it', async ( { page, rest } ) => {
-		const postId = await createPost( rest, 'ROB deleted paragraph' );
+		const postId = await createPost( rest, 'RBR deleted paragraph' );
 		await openEditor( page, postId );
 
 		const modal = await openPostModal( page );
 		// The newest revision matches the editor, so the window opens on the next one.
-		await expect( modal.locator( '.rob-revision.is-selected' ) ).not.toContainText( 'Same as now' );
+		await expect( modal.locator( '.rbr-revision.is-selected' ) ).not.toContainText( 'Same as now' );
 
-		const missing = modal.locator( '.rob-card', { has: page.locator( '.rob-badge--missing' ) } );
+		const missing = modal.locator( '.rbr-card', { has: page.locator( '.rbr-badge--missing' ) } );
 		await expect( missing ).toContainText( 'Old closing line that someone deleted.' );
 		await missing.getByRole( 'button', { name: 'Restore it here' } ).click();
 
@@ -69,20 +69,20 @@ test.describe( 'Restore One Block', () => {
 	} );
 
 	test( 'replaces one block with an older version, after showing the word changes', async ( { page, rest } ) => {
-		const postId = await createPost( rest, 'ROB one block' );
+		const postId = await createPost( rest, 'RBR one block' );
 		await openEditor( page, postId );
 		const clientId = await page.evaluate( () => window.wp.data.select( 'core/block-editor' ).getBlocks()[ 2 ].clientId );
 
 		const modal = await openBlockModal( page, clientId );
 		await expect( modal.getByRole( 'heading', { name: 'Restore this Paragraph from a revision' } ) ).toBeVisible();
 
-		const best = modal.locator( '.rob-card' ).first();
-		await expect( best.locator( '.rob-badge' ) ).toHaveText( 'Best match' );
+		const best = modal.locator( '.rbr-card' ).first();
+		await expect( best.locator( '.rbr-badge' ) ).toHaveText( 'Best match' );
 		await expect( best ).toContainText( 'Flour, sugar, eggs.' );
 
 		await best.getByRole( 'button', { name: 'Show changes' } ).click();
-		await expect( best.locator( '.rob-diff del' ) ).toHaveText( 'water, salt.' );
-		await expect( best.locator( '.rob-diff ins' ) ).toHaveText( 'sugar, eggs.' );
+		await expect( best.locator( '.rbr-diff del' ) ).toHaveText( 'water, salt.' );
+		await expect( best.locator( '.rbr-diff ins' ) ).toHaveText( 'sugar, eggs.' );
 
 		await best.getByRole( 'button', { name: 'Replace current block' } ).click();
 		expect( ( await blocksNow( page ) )[ 2 ] ).toBe( 'Flour, sugar, eggs.' );
@@ -92,12 +92,12 @@ test.describe( 'Restore One Block', () => {
 	} );
 
 	test( 'JavaScript hooks: canRestore hides the menu item, restored reports what came back', async ( { page, rest } ) => {
-		const postId = await createPost( rest, 'ROB hooks' );
+		const postId = await createPost( rest, 'RBR hooks' );
 		await openEditor( page, postId );
 		await page.evaluate( () => {
 			window.robRestored = [];
-			window.wp.hooks.addFilter( 'restoreOneBlock.canRestore', 'rob-e2e', ( canRestore, block ) => canRestore && 'core/heading' !== block.name );
-			window.wp.hooks.addAction( 'restoreOneBlock.restored', 'rob-e2e', ( details ) => window.robRestored.push( { mode: details.mode, name: details.block.name, revisionId: details.revisionId, postId: details.postId } ) );
+			window.wp.hooks.addFilter( 'restoreBlocksFromRevisions.canRestore', 'rbr-e2e', ( canRestore, block ) => canRestore && 'core/heading' !== block.name );
+			window.wp.hooks.addAction( 'restoreBlocksFromRevisions.restored', 'rbr-e2e', ( details ) => window.robRestored.push( { mode: details.mode, name: details.block.name, revisionId: details.revisionId, postId: details.postId } ) );
 		} );
 
 		// The heading has no "Restore from a revision…" item now.
@@ -113,7 +113,7 @@ test.describe( 'Restore One Block', () => {
 		// A paragraph still has it, and restoring fires the action.
 		await blockMenu( 2 );
 		await page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ).click();
-		const best = page.locator( '.rob-card' ).first();
+		const best = page.locator( '.rbr-card' ).first();
 		await best.getByRole( 'button', { name: 'Replace current block' } ).click();
 
 		const restored = await page.evaluate( () => window.robRestored );
@@ -123,17 +123,17 @@ test.describe( 'Restore One Block', () => {
 	} );
 
 	test( 'abilities: an agent finds deleted and changed blocks and puts single blocks back', async ( { rest } ) => {
-		const postId = await createPost( rest, 'ROB agent' );
+		const postId = await createPost( rest, 'RBR agent' );
 		const run = ( name, method, input ) =>
 			'GET' === method
-				? rest( 'GET', `/wp-abilities/v1/abilities/restore-one-block/${ name }/run?${ Object.entries( input ).map( ( [ k, v ] ) => `input[${ k }]=${ encodeURIComponent( v ) }` ).join( '&' ) }` )
-				: rest( 'POST', `/wp-abilities/v1/abilities/restore-one-block/${ name }/run`, { input } );
+				? rest( 'GET', `/wp-abilities/v1/abilities/restore-blocks-from-revisions/${ name }/run?${ Object.entries( input ).map( ( [ k, v ] ) => `input[${ k }]=${ encodeURIComponent( v ) }` ).join( '&' ) }` )
+				: rest( 'POST', `/wp-abilities/v1/abilities/restore-blocks-from-revisions/${ name }/run`, { input } );
 		const content = async () => ( await rest( 'GET', `/wp/v2/posts/${ postId }?context=edit` ) ).body.content.raw;
 
-		const listed = await rest( 'GET', '/wp-abilities/v1/abilities?category=restore-one-block' );
-		expect( listed.body.map( ( ability ) => ability.name ).sort() ).toEqual( [ 'restore-one-block/find-deleted', 'restore-one-block/find-text', 'restore-one-block/list-revisions', 'restore-one-block/restore-block' ] );
+		const listed = await rest( 'GET', '/wp-abilities/v1/abilities?category=restore-blocks-from-revisions' );
+		expect( listed.body.map( ( ability ) => ability.name ).sort() ).toEqual( [ 'restore-blocks-from-revisions/find-deleted', 'restore-blocks-from-revisions/find-text', 'restore-blocks-from-revisions/list-revisions', 'restore-blocks-from-revisions/restore-block' ] );
 		// MCP clients only list abilities marked public.
-		expect( JSON.parse( wpEval( `echo wp_json_encode( array_values( array_filter( array_map( function ( $ability ) { $meta = $ability->get_meta(); return ( ! empty( $meta['public'] ) && ! empty( $meta['mcp']['public'] ) ) ? '' : $ability->get_name(); }, wp_get_abilities() ), function ( $name ) { return 0 === strpos( $name, 'restore-one-block/' ); } ) ) );` ) ) ).toEqual( [] );
+		expect( JSON.parse( wpEval( `echo wp_json_encode( array_values( array_filter( array_map( function ( $ability ) { $meta = $ability->get_meta(); return ( ! empty( $meta['public'] ) && ! empty( $meta['mcp']['public'] ) ) ? '' : $ability->get_name(); }, wp_get_abilities() ), function ( $name ) { return 0 === strpos( $name, 'restore-blocks-from-revisions/' ); } ) ) );` ) ) ).toEqual( [] );
 
 		const revisions = ( await run( 'list-revisions', 'GET', { post_id: postId } ) ).body;
 		expect( revisions.length ).toBeGreaterThanOrEqual( 3 );
@@ -165,20 +165,20 @@ test.describe( 'Restore One Block', () => {
 		const editor = wp( 'user', 'create', `editor${ postId }`, `editor${ postId }@example.com`, '--role=editor', '--porcelain' );
 		wp( 'post', 'meta', 'update', String( postId ), '_edit_lock', `${ Math.floor( Date.now() / 1000 ) }:${ editor }` );
 		const locked = await run( 'restore-block', 'POST', { post_id: postId, revision_id: closing.revision_id, path: [ 0 ] } );
-		expect( locked.body.code ).toBe( 'restore_one_block_locked' );
+		expect( locked.body.code ).toBe( 'restore_blocks_from_revisions_locked' );
 		const forced = await run( 'restore-block', 'POST', { post_id: postId, revision_id: closing.revision_id, path: [ 0 ], position: 0, force: true } );
 		expect( forced.status ).toBe( 200 );
 		wp( 'user', 'delete', editor, '--yes' );
 	} );
 
 	test( 'restores a block nested inside a group', async ( { page, rest } ) => {
-		const postId = await createPost( rest, 'ROB nested' );
+		const postId = await createPost( rest, 'RBR nested' );
 		await openEditor( page, postId );
 		const clientId = await page.evaluate( () => window.wp.data.select( 'core/block-editor' ).getBlocks()[ 3 ].innerBlocks[ 0 ].clientId );
 
 		const modal = await openBlockModal( page, clientId );
-		const best = modal.locator( '.rob-card' ).first();
-		await expect( best.locator( '.rob-badge' ) ).toHaveText( 'Best match' );
+		const best = modal.locator( '.rbr-card' ).first();
+		await expect( best.locator( '.rbr-badge' ) ).toHaveText( 'Best match' );
 		await expect( best ).toContainText( 'Inner note: bake at 200C.' );
 		await best.getByRole( 'button', { name: 'Replace current block' } ).click();
 
@@ -186,25 +186,25 @@ test.describe( 'Restore One Block', () => {
 	} );
 
 	test( 'finds deleted text across revisions and jumps to it', async ( { page, rest } ) => {
-		const postId = await createPost( rest, 'ROB search' );
+		const postId = await createPost( rest, 'RBR search' );
 		await openEditor( page, postId );
 
 		const modal = await openPostModal( page );
 		await modal.getByRole( 'searchbox', { name: 'Find text in old revisions' } ).fill( 'closing line' );
 
-		const result = modal.locator( '.rob-result' );
+		const result = modal.locator( '.rbr-result' );
 		await expect( result ).toHaveCount( 1 );
 		await expect( result.locator( 'mark' ) ).toHaveText( 'closing line' );
-		await expect( result.locator( '.rob-result__meta' ) ).toContainText( 'Paragraph in 2 revisions' );
+		await expect( result.locator( '.rbr-result__meta' ) ).toContainText( 'Paragraph in 2 revisions' );
 
 		await result.getByRole( 'button', { name: 'Show in revision' } ).click();
-		const focused = modal.locator( '.rob-card.is-focused' );
+		const focused = modal.locator( '.rbr-card.is-focused' );
 		await expect( focused ).toContainText( 'Old closing line that someone deleted.' );
 		await expect( focused.locator( 'mark' ) ).toHaveText( 'Old closing line that someone deleted.' );
 	} );
 
 	test( 'lists revisions with author and differences, navigable with the arrow keys', async ( { page, rest } ) => {
-		const postId = await createPost( rest, 'ROB list' );
+		const postId = await createPost( rest, 'RBR list' );
 		await openEditor( page, postId );
 
 		const modal = await openPostModal( page );
@@ -228,6 +228,6 @@ test.describe( 'Restore One Block', () => {
 		await page.keyboard.press( 'End' );
 		await expect( options.nth( 2 ) ).toBeFocused();
 		await page.keyboard.press( 'ArrowDown' );
-		await expect( modal.locator( '.rob-summary' ) ).toContainText( '5 blocks in this revision' );
+		await expect( modal.locator( '.rbr-summary' ) ).toContainText( '5 blocks in this revision' );
 	} );
 } );

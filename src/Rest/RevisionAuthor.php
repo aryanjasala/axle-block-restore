@@ -2,18 +2,18 @@
 /**
  * Author name on revisions in the REST API.
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreOneBlock\Rest;
+namespace AryanX\RestoreBlocksFromRevisions\Rest;
 
-use AryanX\RestoreOneBlock\Plugin;
-use AryanX\RestoreOneBlock\Service;
+use AryanX\RestoreBlocksFromRevisions\Plugin;
+use AryanX\RestoreBlocksFromRevisions\Service;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Adds `restore_one_block_author` to revision responses.
+ * Adds `restore_blocks_from_revisions_author` to revision responses.
  *
  * Revisions only carry an author ID, and editors cannot always list users,
  * so the name comes with the revision. Revisions are only readable by people
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  */
 final class RevisionAuthor implements Service {
 
-	public const FIELD = 'restore_one_block_author';
+	public const FIELD = 'restore_blocks_from_revisions_author';
 
 	/**
 	 * Adds the hooks.
@@ -43,7 +43,7 @@ final class RevisionAuthor implements Service {
 				array(
 					'get_callback' => array( $this, 'author_name' ),
 					'schema'       => array(
-						'description' => __( 'Display name of the revision author.', 'restore-one-block' ),
+						'description' => __( 'Display name of the revision author.', 'restore-blocks-from-revisions' ),
 						'type'        => 'string',
 						'context'     => array( 'edit' ),
 						'readonly'    => true,

@@ -2,7 +2,7 @@
 parameters:
 	level: 6
 	paths:
-		- restore-one-block.php
+		- restore-blocks-from-revisions.php
 		- src
 	scanFiles:
 		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php

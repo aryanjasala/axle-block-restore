@@ -2,15 +2,15 @@
 /**
  * Editor scripts and styles.
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreOneBlock\Editor;
+namespace AryanX\RestoreBlocksFromRevisions\Editor;
 
-use AryanX\RestoreOneBlock\Plugin;
-use AryanX\RestoreOneBlock\Service;
-use const AryanX\RestoreOneBlock\PLUGIN_FILE;
-use const AryanX\RestoreOneBlock\VERSION;
+use AryanX\RestoreBlocksFromRevisions\Plugin;
+use AryanX\RestoreBlocksFromRevisions\Service;
+use const AryanX\RestoreBlocksFromRevisions\PLUGIN_FILE;
+use const AryanX\RestoreBlocksFromRevisions\VERSION;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,12 +41,12 @@ final class Assets implements Service {
 
 		$url = plugins_url( 'assets/', PLUGIN_FILE );
 
-		wp_register_script( 'restore-one-block-matching', $url . 'js/matching.js', array(), VERSION, true );
+		wp_register_script( 'restore-blocks-from-revisions-matching', $url . 'js/matching.js', array(), VERSION, true );
 		wp_register_script(
-			'restore-one-block-components',
+			'restore-blocks-from-revisions-components',
 			$url . 'js/components.js',
 			array(
-				'restore-one-block-matching',
+				'restore-blocks-from-revisions-matching',
 				'wp-api-fetch',
 				'wp-block-editor',
 				'wp-blocks',
@@ -64,11 +64,11 @@ final class Assets implements Service {
 			VERSION,
 			true
 		);
-		wp_enqueue_script( 'restore-one-block', $url . 'js/index.js', array( 'restore-one-block-components', 'wp-data', 'wp-hooks', 'wp-plugins' ), VERSION, true );
+		wp_enqueue_script( 'restore-blocks-from-revisions', $url . 'js/index.js', array( 'restore-blocks-from-revisions-components', 'wp-data', 'wp-hooks', 'wp-plugins' ), VERSION, true );
 
-		wp_set_script_translations( 'restore-one-block-components', 'restore-one-block' );
-		wp_set_script_translations( 'restore-one-block', 'restore-one-block' );
+		wp_set_script_translations( 'restore-blocks-from-revisions-components', 'restore-blocks-from-revisions' );
+		wp_set_script_translations( 'restore-blocks-from-revisions', 'restore-blocks-from-revisions' );
 
-		wp_enqueue_style( 'restore-one-block', $url . 'editor.css', array( 'wp-components' ), VERSION );
+		wp_enqueue_style( 'restore-blocks-from-revisions', $url . 'editor.css', array( 'wp-components' ), VERSION );
 	}
 }

@@ -1,5 +1,5 @@
 name: Feature request
-description: An idea that would make Restore One Block more useful.
+description: An idea that would make Restore Blocks from Revisions more useful.
 labels: [enhancement]
 body:
   - type: textarea

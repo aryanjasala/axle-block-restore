@@ -2,13 +2,13 @@
 /**
  * Plugin bootstrap.
  *
- * @package AryanX\RestoreOneBlock
+ * @package AryanX\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreOneBlock;
+namespace AryanX\RestoreBlocksFromRevisions;
 
-use AryanX\RestoreOneBlock\Editor\Assets;
-use AryanX\RestoreOneBlock\Rest\RevisionAuthor;
+use AryanX\RestoreBlocksFromRevisions\Editor\Assets;
+use AryanX\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -54,13 +54,13 @@ final class Plugin {
 		);
 
 		/**
-		 * Filters the post types that get Restore One Block in the editor.
+		 * Filters the post types that get Restore Blocks from Revisions in the editor.
 		 *
 		 * Only post types with revisions and the editor make sense; others are dropped.
 		 *
 		 * @param string[] $post_types Default every REST-enabled post type with revisions and the editor.
 		 */
-		$filtered = (array) apply_filters( 'restore_one_block_post_types', $post_types );
+		$filtered = (array) apply_filters( 'restore_blocks_from_revisions_post_types', $post_types );
 
 		return array_values(
 			array_filter(

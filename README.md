@@ -1,19 +1,19 @@
 <p align="center"><img src=".wordpress-org/icon-256x256.png" alt="" width="88"></p>
 
-<h1 align="center">Restore One Block</h1>
+<h1 align="center">Restore Blocks from Revisions</h1>
 
 <p align="center">
-  <a href="https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/aryanjasala/restore-one-block/main/blueprint.json"><img src="https://img.shields.io/badge/Try%20in-WordPress%20Playground-3858e9?logo=wordpress&logoColor=white" alt="Try in WordPress Playground"></a>
-  <a href="https://github.com/aryanjasala/restore-one-block/releases/latest"><img src="https://img.shields.io/github/v/release/aryanjasala/restore-one-block?label=release&color=2271b1" alt="Latest release"></a>
+  <a href="https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/aryanjasala/restore-blocks-from-revisions/main/blueprint.json"><img src="https://img.shields.io/badge/Try%20in-WordPress%20Playground-3858e9?logo=wordpress&logoColor=white" alt="Try in WordPress Playground"></a>
+  <a href="https://github.com/aryanjasala/restore-blocks-from-revisions/releases/latest"><img src="https://img.shields.io/github/v/release/aryanjasala/restore-blocks-from-revisions?label=release&color=2271b1" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/WordPress-6.6%2B-3858e9?logo=wordpress&logoColor=white" alt="WordPress 6.6+">
   <img src="https://img.shields.io/badge/PHP-7.4%2B-777bb4?logo=php&logoColor=white" alt="PHP 7.4+">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue" alt="License: GPL-2.0-or-later"></a>
   <br>
-  <a href="https://github.com/aryanjasala/restore-one-block/actions/workflows/phpcs.yml"><img src="https://github.com/aryanjasala/restore-one-block/actions/workflows/phpcs.yml/badge.svg" alt="PHPCS"></a>
-  <a href="https://github.com/aryanjasala/restore-one-block/actions/workflows/phpstan.yml"><img src="https://github.com/aryanjasala/restore-one-block/actions/workflows/phpstan.yml/badge.svg" alt="PHPStan"></a>
-  <a href="https://github.com/aryanjasala/restore-one-block/actions/workflows/unit-tests.yml"><img src="https://github.com/aryanjasala/restore-one-block/actions/workflows/unit-tests.yml/badge.svg" alt="Unit tests"></a>
-  <a href="https://github.com/aryanjasala/restore-one-block/actions/workflows/e2e-tests.yml"><img src="https://github.com/aryanjasala/restore-one-block/actions/workflows/e2e-tests.yml/badge.svg" alt="E2E tests"></a>
-  <a href="https://github.com/aryanjasala/restore-one-block/actions/workflows/plugin-check.yml"><img src="https://github.com/aryanjasala/restore-one-block/actions/workflows/plugin-check.yml/badge.svg" alt="Plugin Check"></a>
+  <a href="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/phpcs.yml"><img src="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/phpcs.yml/badge.svg" alt="PHPCS"></a>
+  <a href="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/phpstan.yml"><img src="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/phpstan.yml/badge.svg" alt="PHPStan"></a>
+  <a href="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/unit-tests.yml"><img src="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/unit-tests.yml/badge.svg" alt="Unit tests"></a>
+  <a href="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/e2e-tests.yml"><img src="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/e2e-tests.yml/badge.svg" alt="E2E tests"></a>
+  <a href="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/plugin-check.yml"><img src="https://github.com/aryanjasala/restore-blocks-from-revisions/actions/workflows/plugin-check.yml/badge.svg" alt="Plugin Check"></a>
 </p>
 
 <p align="center">Restore a single block from an old revision instead of rolling back the whole post.</p>
@@ -24,7 +24,7 @@
 
 ---
 
-WordPress revisions are all or nothing. If someone deleted a paragraph last week and the post has been edited ten times since, restoring the revision brings the paragraph back and throws away the ten edits. Restore One Block works inside the editor and restores single blocks, with all their settings, as a normal undoable change.
+WordPress revisions are all or nothing. If someone deleted a paragraph last week and the post has been edited ten times since, restoring the revision brings the paragraph back and throws away the ten edits. Restore Blocks from Revisions works inside the editor and restores single blocks, with all their settings, as a normal undoable change.
 
 > [!NOTE]
 > Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
@@ -42,13 +42,13 @@ WordPress revisions are all or nothing. If someone deleted a paragraph last week
 
 ## Install
 
-1. Download `restore-one-block.zip` from the [latest release](https://github.com/aryanjasala/restore-one-block/releases/latest).
+1. Download `restore-blocks-from-revisions.zip` from the [latest release](https://github.com/aryanjasala/restore-blocks-from-revisions/releases/latest).
 2. In WordPress, go to **Plugins > Add New Plugin > Upload Plugin**, choose the zip and activate it.
 
 Or with WP-CLI:
 
 ```sh
-wp plugin install https://github.com/aryanjasala/restore-one-block/releases/latest/download/restore-one-block.zip --activate
+wp plugin install https://github.com/aryanjasala/restore-blocks-from-revisions/releases/latest/download/restore-blocks-from-revisions.zip --activate
 ```
 
 Needs WordPress 6.6+ and PHP 7.4+. To try it first, the **Try in WordPress Playground** badge opens a throwaway WordPress in your browser with the plugin and some demo content.
@@ -85,7 +85,7 @@ There is no build step and nothing is stored: revisions are read through the RES
 ## Project structure
 
 ```
-restore-one-block.php     plugin header and PSR-4 autoloader
+restore-blocks-from-revisions.php     plugin header and PSR-4 autoloader
 src/
 ├── Plugin.php            registers the services, lists supported post types
 ├── Editor/Assets.php     loads the editor scripts
@@ -109,10 +109,10 @@ Small plugins that each fill one gap in WordPress, all free with no pro version:
 
 | | Plugin | What it does |
 | --- | --- | --- |
-| <img src="https://raw.githubusercontent.com/aryanjasala/template-usage-column/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Template Usage Column](https://github.com/aryanjasala/template-usage-column) | See which template every page uses, and fix the pages on a missing template |
+| <img src="https://raw.githubusercontent.com/aryanjasala/page-template-usage/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Page Template Usage](https://github.com/aryanjasala/page-template-usage) | See which template every page uses, and fix the pages on a missing template |
 | <img src="https://raw.githubusercontent.com/aryanjasala/staging-guard/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Staging Guard](https://github.com/aryanjasala/staging-guard) | Stops staging copies from emailing real people or getting indexed |
-| <img src="https://raw.githubusercontent.com/aryanjasala/term-trash/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Term Trash](https://github.com/aryanjasala/term-trash) | A trash for categories, tags and custom terms, with undo and full restore |
-| <img src="https://raw.githubusercontent.com/aryanjasala/deploy-freeze/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Deploy Freeze](https://github.com/aryanjasala/deploy-freeze) | Read-only mode for WordPress during migrations and deploys |
+| <img src="https://raw.githubusercontent.com/aryanjasala/category-tag-trash/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Category & Tag Trash](https://github.com/aryanjasala/category-tag-trash) | A trash for categories, tags and custom terms, with undo and full restore |
+| <img src="https://raw.githubusercontent.com/aryanjasala/site-read-only-mode/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Site Read-Only Mode](https://github.com/aryanjasala/site-read-only-mode) | Read-only mode for WordPress during migrations and deploys |
 
 ## License
 

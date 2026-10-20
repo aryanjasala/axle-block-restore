@@ -1,5 +1,5 @@
 {
-  "name": "aryanx/restore-one-block",
+  "name": "aryanx/restore-blocks-from-revisions",
   "description": "Restore a single block from an old WordPress revision.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
@@ -25,12 +25,12 @@
   },
   "autoload": {
     "psr-4": {
-      "AryanX\\RestoreOneBlock\\": "src/"
+      "AryanX\\RestoreBlocksFromRevisions\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "AryanX\\RestoreOneBlock\\Tests\\": "tests/"
+      "AryanX\\RestoreBlocksFromRevisions\\Tests\\": "tests/"
     }
   },
   "config": {

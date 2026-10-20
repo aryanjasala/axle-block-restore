@@ -72,13 +72,13 @@ jobs:
             echo
             echo "### Install"
             echo
-            echo "Download \`restore-one-block.zip\` below and upload it under **Plugins > Add New Plugin > Upload Plugin**, or run:"
+            echo "Download \`restore-blocks-from-revisions.zip\` below and upload it under **Plugins > Add New Plugin > Upload Plugin**, or run:"
             echo
             echo '```'
-            echo "wp plugin install https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/restore-one-block.zip --activate"
+            echo "wp plugin install https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/restore-blocks-from-revisions.zip --activate"
             echo '```'
             echo
-            echo "SHA-256 of the zip: \`$(sha256sum dist/restore-one-block.zip | cut -d ' ' -f 1)\`"
+            echo "SHA-256 of the zip: \`$(sha256sum dist/restore-blocks-from-revisions.zip | cut -d ' ' -f 1)\`"
             if [ -n "$previous" ]; then
               echo
               echo "**Full diff:** https://github.com/$GITHUB_REPOSITORY/compare/$previous...v$VERSION"
@@ -92,9 +92,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "v$VERSION" "dist/restore-one-block.zip" \
+          gh release create "v$VERSION" "dist/restore-blocks-from-revisions.zip" \
             --target "$GITHUB_SHA" \
-            --title "Restore One Block $VERSION" \
+            --title "Restore Blocks from Revisions $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md"
 
   wordpress-org:
@@ -109,5 +109,5 @@ jobs:
         env:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SLUG: restore-one-block
+          SLUG: restore-blocks-from-revisions
           VERSION: ${{ needs.release.outputs.version }}

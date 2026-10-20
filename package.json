@@ -1,5 +1,5 @@
 {
-  "name": "restore-one-block",
+  "name": "restore-blocks-from-revisions",
   "private": true,
   "description": "Restore a single block from an old WordPress revision.",
   "license": "GPL-2.0-or-later",

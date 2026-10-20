@@ -15,7 +15,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-slug="restore-one-block"
+slug="restore-blocks-from-revisions"
 main_file="$slug.php"
 
 header_version() {
