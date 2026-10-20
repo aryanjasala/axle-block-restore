@@ -45,6 +45,26 @@ wp.hooks.addAction( 'restoreOneBlock.restored', 'my-plugin', ( details ) => cons
 
 Load that script with `wp-hooks` as a dependency, on `enqueue_block_editor_assets`.
 
+## Abilities
+
+On WordPress 6.9 and later, Restore One Block registers [abilities](https://developer.wordpress.org/apis/abilities/), which AI agents find and run through the [MCP adapter](https://github.com/WordPress/mcp-adapter) and anything else through the REST API under `/wp-abilities/v1/`.
+
+In the editor the plugin guesses which old block matches which current one. An agent does not need the guess: it finds text that was deleted or changed, then names the exact block to bring back. A path counts blocks from 0, one number per level: `[2]` is the third top-level block, `[2, 0]` the first block inside it.
+
+| Ability | Does |
+| --- | --- |
+| `restore-one-block/list-revisions` | Read-only. Revisions of `post_id`, newest first, with who saved each |
+| `restore-one-block/find-deleted` | Read-only. Blocks whose text is in an old revision but not in the post, with the `revision_id` and `path` to restore them |
+| `restore-one-block/find-text` | Read-only. Blocks in old revisions containing `text`, and whether each is still in the post |
+| `restore-one-block/restore-block` | Puts the block at `path` in `revision_id` back: `mode` `insert` at a top-level `position` (default: where it was), or `replace` the block at `target_path` (default: the same path). Saves the post, which makes a new revision, so it can be undone. Refuses while someone else has the post open in the editor, unless `force` is true |
+
+All four need `edit_post` on the post, in a post type that has Restore One Block. The find abilities look through 20 revisions by default, 50 at most (`restore_one_block_max_revisions`).
+
+| Hook | Type | Use |
+| --- | --- | --- |
+| `restore_one_block_restored` | action | `( int $post_id, array $block, int $revision_id, string $mode )`. A block was saved back through `restore-block` |
+| `restore_one_block_max_revisions` | filter | `( int $max )`. Most revisions the find abilities look through. Default 50 |
+
 ## REST
 
 Revisions are fetched 50 at a time from `/wp/v2/<type>/<id>/revisions` with `context=edit` and `_fields=id,date_gmt,slug,content.raw,restore_one_block_author`, so the server returns raw block markup and never renders the content.

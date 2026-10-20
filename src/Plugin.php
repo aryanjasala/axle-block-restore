@@ -31,7 +31,7 @@ final class Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 
-			$services = array( new Assets(), new RevisionAuthor() );
+			$services = array( new Assets(), new RevisionAuthor(), new Abilities() );
 			foreach ( $services as $service ) {
 				$service->register();
 			}
