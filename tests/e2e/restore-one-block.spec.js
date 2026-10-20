@@ -1,4 +1,4 @@
-const { test, expect, openEditor } = require( './utils' );
+const { test, expect, openEditor, wp } = require( './utils' );
 
 const p = ( text ) => `<!-- wp:paragraph --><p>${ text }</p><!-- /wp:paragraph -->`;
 const heading = '<!-- wp:heading --><h2 class="wp-block-heading">Ingredients</h2><!-- /wp:heading -->';
@@ -120,6 +120,53 @@ test.describe( 'Restore One Block', () => {
 		expect( restored ).toHaveLength( 1 );
 		expect( restored[ 0 ] ).toMatchObject( { mode: 'replace', name: 'core/paragraph', postId } );
 		expect( restored[ 0 ].revisionId ).toBeGreaterThan( 0 );
+	} );
+
+	test( 'abilities: an agent finds deleted and changed blocks and puts single blocks back', async ( { rest } ) => {
+		const postId = await createPost( rest, 'ROB agent' );
+		const run = ( name, method, input ) =>
+			'GET' === method
+				? rest( 'GET', `/wp-abilities/v1/abilities/restore-one-block/${ name }/run?${ Object.entries( input ).map( ( [ k, v ] ) => `input[${ k }]=${ encodeURIComponent( v ) }` ).join( '&' ) }` )
+				: rest( 'POST', `/wp-abilities/v1/abilities/restore-one-block/${ name }/run`, { input } );
+		const content = async () => ( await rest( 'GET', `/wp/v2/posts/${ postId }?context=edit` ) ).body.content.raw;
+
+		const listed = await rest( 'GET', '/wp-abilities/v1/abilities?category=restore-one-block' );
+		expect( listed.body.map( ( ability ) => ability.name ).sort() ).toEqual( [ 'restore-one-block/find-deleted', 'restore-one-block/find-text', 'restore-one-block/list-revisions', 'restore-one-block/restore-block' ] );
+
+		const revisions = ( await run( 'list-revisions', 'GET', { post_id: postId } ) ).body;
+		expect( revisions.length ).toBeGreaterThanOrEqual( 3 );
+		expect( revisions[ 0 ] ).toMatchObject( { author: 'admin', autosave: false, blocks: 4 } );
+
+		const deleted = ( await run( 'find-deleted', 'GET', { post_id: postId } ) ).body;
+		const closing = deleted.find( ( item ) => item.text === 'Old closing line that someone deleted.' );
+		expect( closing ).toMatchObject( { path: [ 4 ], name: 'core/paragraph', in_current: false } );
+		expect( deleted.find( ( item ) => item.text === 'Inner note: bake at 200C.' ) ).toMatchObject( { path: [ 3, 0 ] } );
+
+		// Back where it was, after the group.
+		const inserted = await run( 'restore-block', 'POST', { post_id: postId, revision_id: closing.revision_id, path: closing.path } );
+		expect( inserted.status ).toBe( 200 );
+		expect( inserted.body ).toMatchObject( { mode: 'insert', name: 'core/paragraph', path: [ 4 ] } );
+		expect( await content() ).toMatch( /<\/div>\s*<!-- \/wp:group -->\n\n<!-- wp:paragraph -->\s*<p>Old closing line that someone deleted\.<\/p>/ );
+
+		// One paragraph, and one block inside the group, back to older versions.
+		const sugar = deleted.find( ( item ) => item.text === 'Flour, sugar, eggs.' );
+		const note = deleted.find( ( item ) => item.text === 'Inner note: bake at 200C.' );
+		await run( 'restore-block', 'POST', { post_id: postId, revision_id: sugar.revision_id, path: sugar.path, mode: 'replace' } );
+		await run( 'restore-block', 'POST', { post_id: postId, revision_id: note.revision_id, path: note.path, mode: 'replace' } );
+		const now = await content();
+		expect( now ).toContain( 'Flour, sugar, eggs.' );
+		expect( now ).not.toContain( 'Flour, water, salt.' );
+		expect( now ).toMatch( /<div class="wp-block-group">\s*<!-- wp:paragraph -->\s*<p>Inner note: bake at 200C\.<\/p>/ );
+		expect( ( await run( 'find-text', 'GET', { post_id: postId, text: 'closing line' } ) ).body[ 0 ].in_current ).toBe( true );
+
+		// Someone else editing: refused unless forced.
+		const editor = wp( 'user', 'create', `editor${ postId }`, `editor${ postId }@example.com`, '--role=editor', '--porcelain' );
+		wp( 'post', 'meta', 'update', String( postId ), '_edit_lock', `${ Math.floor( Date.now() / 1000 ) }:${ editor }` );
+		const locked = await run( 'restore-block', 'POST', { post_id: postId, revision_id: closing.revision_id, path: [ 0 ] } );
+		expect( locked.body.code ).toBe( 'restore_one_block_locked' );
+		const forced = await run( 'restore-block', 'POST', { post_id: postId, revision_id: closing.revision_id, path: [ 0 ], position: 0, force: true } );
+		expect( forced.status ).toBe( 200 );
+		wp( 'user', 'delete', editor, '--yes' );
 	} );
 
 	test( 'restores a block nested inside a group', async ( { page, rest } ) => {
