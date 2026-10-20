@@ -4,7 +4,7 @@ Tags: revisions, block editor, undo, restore, gutenberg
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,10 @@ Not yet. Templates have revisions too, and support is planned.
 3. Finding deleted text across revisions.
 
 == Changelog ==
+
+= 1.2.0 =
+* New: add PHP and JavaScript hooks for post types, which blocks can be restored, and each restore
+* Fix: make the restore window translatable and keyboard friendly
 
 = 1.1.0 =
 * New: search old revisions for text.
