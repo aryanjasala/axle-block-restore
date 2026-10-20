@@ -21,6 +21,30 @@ There is no build step. The scripts use the `wp.*` globals WordPress already loa
 | `assets/js/components.js` | The restore window, built on `wp.components` and `wp.blockEditor` |
 | `assets/js/index.js` | The two menu entries (`BlockSettingsMenuControls` and `PluginMoreMenuItem`) |
 
+## Hooks
+
+PHP:
+
+| Hook | Type | Use |
+| --- | --- | --- |
+| `restore_one_block_post_types` | filter | `( string[] $post_types )`. Post types that get Restore One Block. Default every REST-enabled post type with revisions and the editor. Types without revisions are dropped |
+
+JavaScript, through `wp.hooks`:
+
+| Hook | Type | Use |
+| --- | --- | --- |
+| `restoreOneBlock.canRestore` | filter | `( boolean canRestore, Object block )`. Whether a block's menu offers "Restore from a revision…" |
+| `restoreOneBlock.revisionsPerPage` | filter | `( number perPage )`. Revisions loaded at a time, 1 to 100. Default 50 |
+| `restoreOneBlock.restored` | action | `( { mode, block, revisionId, postId } )`. A block came back. `mode` is `replace`, `insert-after`, `replace-at` or `insert-at` |
+
+```js
+// No restoring for reusable blocks, and log every restore.
+wp.hooks.addFilter( 'restoreOneBlock.canRestore', 'my-plugin', ( canRestore, block ) => canRestore && 'core/block' !== block.name );
+wp.hooks.addAction( 'restoreOneBlock.restored', 'my-plugin', ( details ) => console.log( 'Restored', details.block.name, 'from revision', details.revisionId ) );
+```
+
+Load that script with `wp-hooks` as a dependency, on `enqueue_block_editor_assets`.
+
 ## REST
 
 Revisions are fetched 50 at a time from `/wp/v2/<type>/<id>/revisions` with `context=edit` and `_fields=id,date_gmt,slug,content.raw,restore_one_block_author`, so the server returns raw block markup and never renders the content.

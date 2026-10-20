@@ -16,8 +16,22 @@
 	const { parse, serialize, cloneBlock, getBlockType } = wp.blocks;
 	const { addQueryArgs } = wp.url;
 	const { dateI18n, getSettings: getDateSettings } = wp.date;
+	const { applyFilters, doAction } = wp.hooks;
 
-	const PER_PAGE = 50;
+	/**
+	 * Revisions loaded at a time. Read when the window opens, so filters added by
+	 * scripts that load later still count.
+	 *
+	 * @return {number} Between 1 and 100, the most the REST API allows.
+	 */
+	function perPage() {
+		/**
+		 * Filters how many revisions load at a time.
+		 *
+		 * @param {number} perPage Default 50.
+		 */
+		return Math.min( 100, Math.max( 1, parseInt( applyFilters( 'restoreOneBlock.revisionsPerPage', 50 ), 10 ) || 50 ) );
+	}
 	const MAX_CANDIDATES = 6;
 
 	/**
@@ -64,6 +78,7 @@
 	 * @return {Object} Revisions, loading flag, error, and loadMore().
 	 */
 	function useRevisions( post ) {
+		const PER_PAGE = useMemo( perPage, [] );
 		const [ revisions, setRevisions ] = useState( [] );
 		const [ page, setPage ] = useState( 1 );
 		const [ hasMore, setHasMore ] = useState( false );
@@ -445,8 +460,19 @@
 
 		const selected = revisionsById[ selectedId ];
 		const restored = __( 'Block restored. Save the post to keep it, or press Ctrl+Z (⌘Z) to undo.', 'restore-one-block' );
-		const done = () => {
+		const done = ( mode, block ) => {
 			createSuccessNotice( restored, { type: 'snackbar' } );
+
+			/**
+			 * Fires after a block is restored from a revision.
+			 *
+			 * @param {Object} details            What happened.
+			 * @param {string} details.mode       replace, insert-after, replace-at or insert-at.
+			 * @param {Object} details.block      The restored block, as inserted.
+			 * @param {number} details.revisionId Revision it came from.
+			 * @param {number} details.postId     Post being edited.
+			 */
+			doAction( 'restoreOneBlock.restored', { mode, block, revisionId: selectedId, postId: data.post.id } );
 			onClose();
 		};
 
@@ -491,12 +517,14 @@
 				query: focusText,
 				focusText,
 				onReplace: ( block ) => {
-					replaceBlock( clientId, cloneBlock( block ) );
-					done();
+					const copy = cloneBlock( block );
+					replaceBlock( clientId, copy );
+					done( 'replace', copy );
 				},
 				onInsertAfter: ( block ) => {
-					insertBlocks( [ cloneBlock( block ) ], target.index + 1, target.rootClientId );
-					done();
+					const copy = cloneBlock( block );
+					insertBlocks( [ copy ], target.index + 1, target.rootClientId );
+					done( 'insert-after', copy );
 				},
 			} );
 		} else {
@@ -507,12 +535,14 @@
 				query: focusText,
 				focusText,
 				onReplaceAt: ( block, index ) => {
-					replaceBlock( data.blocks[ index ].clientId, cloneBlock( block ) );
-					done();
+					const copy = cloneBlock( block );
+					replaceBlock( data.blocks[ index ].clientId, copy );
+					done( 'replace-at', copy );
 				},
 				onInsertAt: ( block, index ) => {
-					insertBlocks( [ cloneBlock( block ) ], Math.min( index, data.blocks.length ) );
-					done();
+					const copy = cloneBlock( block );
+					insertBlocks( [ copy ], Math.min( index, data.blocks.length ) );
+					done( 'insert-at', copy );
 				},
 			} );
 		}
