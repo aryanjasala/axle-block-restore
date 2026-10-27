@@ -25,12 +25,12 @@
   },
   "autoload": {
     "psr-4": {
-      "AryanX\\RestoreBlocksFromRevisions\\": "src/"
+      "AryanX\\Axle\\RestoreBlocksFromRevisions\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "AryanX\\RestoreBlocksFromRevisions\\Tests\\": "tests/"
+      "AryanX\\Axle\\RestoreBlocksFromRevisions\\Tests\\": "tests/"
     }
   },
   "config": {

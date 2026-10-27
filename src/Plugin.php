@@ -2,14 +2,14 @@
 /**
  * Plugin bootstrap.
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions;
+namespace AryanX\Axle\RestoreBlocksFromRevisions;
 
-use AryanX\RestoreBlocksFromRevisions\Editor\Assets;
-use AryanX\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
-use AryanX\RestoreBlocksFromRevisions\Rest\RevisionContent;
+use AryanX\Axle\RestoreBlocksFromRevisions\Editor\Assets;
+use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
+use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionContent;
 
 defined( 'ABSPATH' ) || exit;
 

@@ -2,15 +2,15 @@
 /**
  * Editor scripts and styles.
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions\Editor;
+namespace AryanX\Axle\RestoreBlocksFromRevisions\Editor;
 
-use AryanX\RestoreBlocksFromRevisions\Plugin;
-use AryanX\RestoreBlocksFromRevisions\Service;
-use const AryanX\RestoreBlocksFromRevisions\PLUGIN_FILE;
-use const AryanX\RestoreBlocksFromRevisions\VERSION;
+use AryanX\Axle\RestoreBlocksFromRevisions\Plugin;
+use AryanX\Axle\RestoreBlocksFromRevisions\Service;
+use const AryanX\Axle\RestoreBlocksFromRevisions\PLUGIN_FILE;
+use const AryanX\Axle\RestoreBlocksFromRevisions\VERSION;
 
 defined( 'ABSPATH' ) || exit;
 

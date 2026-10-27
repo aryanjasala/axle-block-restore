@@ -2,13 +2,13 @@
 /**
  * Author name on revisions in the REST API.
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions\Rest;
+namespace AryanX\Axle\RestoreBlocksFromRevisions\Rest;
 
-use AryanX\RestoreBlocksFromRevisions\Plugin;
-use AryanX\RestoreBlocksFromRevisions\Service;
+use AryanX\Axle\RestoreBlocksFromRevisions\Plugin;
+use AryanX\Axle\RestoreBlocksFromRevisions\Service;
 
 defined( 'ABSPATH' ) || exit;
 
