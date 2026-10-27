@@ -2,10 +2,10 @@
 /**
  * Abilities: find and restore single blocks for AI agents and other Abilities API clients.
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions;
+namespace AryanX\Axle\RestoreBlocksFromRevisions;
 
 defined( 'ABSPATH' ) || exit;
 

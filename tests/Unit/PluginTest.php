@@ -2,14 +2,14 @@
 /**
  * Tests for which post types get the editor tools, and the revision REST fields.
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions\Tests\Unit;
+namespace AryanX\Axle\RestoreBlocksFromRevisions\Tests\Unit;
 
-use AryanX\RestoreBlocksFromRevisions\Plugin;
-use AryanX\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
-use AryanX\RestoreBlocksFromRevisions\Rest\RevisionContent;
+use AryanX\Axle\RestoreBlocksFromRevisions\Plugin;
+use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
+use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionContent;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 

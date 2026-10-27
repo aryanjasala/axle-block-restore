@@ -2,10 +2,10 @@
 /**
  * Contract for classes that hook into WordPress.
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions;
+namespace AryanX\Axle\RestoreBlocksFromRevisions;
 
 defined( 'ABSPATH' ) || exit;
 

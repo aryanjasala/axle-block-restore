@@ -12,17 +12,17 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       restore-blocks-from-revisions
  *
- * @package AryanX\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\RestoreBlocksFromRevisions
  */
 
-namespace AryanX\RestoreBlocksFromRevisions;
+namespace AryanX\Axle\RestoreBlocksFromRevisions;
 
 defined( 'ABSPATH' ) || exit;
 
 const VERSION     = '2.0.1';
 const PLUGIN_FILE = __FILE__;
 
-// PSR-4: AryanX\RestoreBlocksFromRevisions\Foo\Bar lives in src/Foo/Bar.php.
+// PSR-4: AryanX\Axle\RestoreBlocksFromRevisions\Foo\Bar lives in src/Foo/Bar.php.
 spl_autoload_register(
 	static function ( $class_name ) {
 		$prefix = __NAMESPACE__ . '\\';
