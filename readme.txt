@@ -46,6 +46,10 @@ No settings and nothing stored in the database.
 
 Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
 
+**Try it before you install.** [try.axlewp.com/restore-blocks-from-revisions](https://try.axlewp.com/restore-blocks-from-revisions) opens a private WordPress in your browser with this plugin and some demo content.
+
+Part of [Axle](https://axlewp.com/), a family of free plugins for running WordPress sites safely.
+
 == Frequently Asked Questions ==
 
 = How does it find "the same block" in an old revision? =
