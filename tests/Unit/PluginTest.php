@@ -2,14 +2,14 @@
 /**
  * Tests for which post types get the editor tools, and the revision REST fields.
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions\Tests\Unit;
+namespace AryanX\Axle\BlockRestore\Tests\Unit;
 
-use AryanX\Axle\RestoreBlocksFromRevisions\Plugin;
-use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
-use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionContent;
+use AryanX\Axle\BlockRestore\Plugin;
+use AryanX\Axle\BlockRestore\Rest\RevisionAuthor;
+use AryanX\Axle\BlockRestore\Rest\RevisionContent;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 
@@ -46,7 +46,7 @@ final class PluginTest extends TestCase {
 
 	public function test_the_filter_can_narrow_the_list_but_not_add_types_without_revisions(): void {
 		$this->post_types_exist();
-		Filters\expectApplied( 'restore_blocks_from_revisions_post_types' )->andReturn( array( 'post', 'attachment', 'product' ) );
+		Filters\expectApplied( 'axle_block_restore_post_types' )->andReturn( array( 'post', 'attachment', 'product' ) );
 
 		$this->assertSame( array( 'post' ), Plugin::post_types() );
 	}

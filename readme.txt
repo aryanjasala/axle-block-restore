@@ -1,4 +1,4 @@
-=== Restore Blocks from Revisions ===
+=== Axle Block Restore ===
 Contributors: aryanjasala
 Tags: revisions, block editor, undo, restore, blocks
 Requires at least: 6.6
@@ -14,7 +14,7 @@ Bring back one block from an old revision, such as a deleted paragraph or an ear
 
 WordPress revisions are all or nothing. If someone deleted a paragraph last week and the post has been edited ten times since, "Restore This Revision" brings the paragraph back but throws away the ten edits. The usual workaround is copying text out of the revisions screen by hand, which loses the block's formatting and settings.
 
-Restore Blocks from Revisions works inside the block editor and restores single blocks, with all their settings.
+Axle Block Restore works inside the block editor and restores single blocks, with all their settings.
 
 **Restore one block to an earlier version**
 
@@ -46,7 +46,9 @@ No settings and nothing stored in the database.
 
 Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
 
-**Try it before you install.** [try.axlewp.com/restore-blocks-from-revisions](https://try.axlewp.com/restore-blocks-from-revisions) opens a private WordPress in your browser with this plugin and some demo content.
+Part of Axle by AryanX, a family of plugins for running WordPress sites safely.
+
+**Try it before you install.** [try.axlewp.com/axle-block-restore](https://try.axlewp.com/axle-block-restore) opens a private WordPress in your browser with this plugin and some demo content.
 
 Part of [Axle](https://axlewp.com/), a family of free plugins for running WordPress sites safely.
 
@@ -76,7 +78,7 @@ Not yet. Templates have revisions too, and support is planned.
 * Fix: load revision content on WordPress 6.6 to 6.9
 
 = 2.0.0 =
-* Changed (breaking change): rename to Restore Blocks from Revisions for WordPress.org
+* Changed (breaking change): rename to Axle Block Restore for WordPress.org
 
 = 1.3.0 =
 * Fix: make the abilities visible to MCP agents

@@ -2,15 +2,15 @@
 /**
  * Editor scripts and styles.
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions\Editor;
+namespace AryanX\Axle\BlockRestore\Editor;
 
-use AryanX\Axle\RestoreBlocksFromRevisions\Plugin;
-use AryanX\Axle\RestoreBlocksFromRevisions\Service;
-use const AryanX\Axle\RestoreBlocksFromRevisions\PLUGIN_FILE;
-use const AryanX\Axle\RestoreBlocksFromRevisions\VERSION;
+use AryanX\Axle\BlockRestore\Plugin;
+use AryanX\Axle\BlockRestore\Service;
+use const AryanX\Axle\BlockRestore\PLUGIN_FILE;
+use const AryanX\Axle\BlockRestore\VERSION;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,12 +41,12 @@ final class Assets implements Service {
 
 		$url = plugins_url( 'assets/', PLUGIN_FILE );
 
-		wp_register_script( 'restore-blocks-from-revisions-matching', $url . 'js/matching.js', array(), VERSION, true );
+		wp_register_script( 'axle-block-restore-matching', $url . 'js/matching.js', array(), VERSION, true );
 		wp_register_script(
-			'restore-blocks-from-revisions-components',
+			'axle-block-restore-components',
 			$url . 'js/components.js',
 			array(
-				'restore-blocks-from-revisions-matching',
+				'axle-block-restore-matching',
 				'wp-api-fetch',
 				'wp-block-editor',
 				'wp-blocks',
@@ -64,11 +64,11 @@ final class Assets implements Service {
 			VERSION,
 			true
 		);
-		wp_enqueue_script( 'restore-blocks-from-revisions', $url . 'js/index.js', array( 'restore-blocks-from-revisions-components', 'wp-data', 'wp-hooks', 'wp-plugins' ), VERSION, true );
+		wp_enqueue_script( 'axle-block-restore', $url . 'js/index.js', array( 'axle-block-restore-components', 'wp-data', 'wp-hooks', 'wp-plugins' ), VERSION, true );
 
-		wp_set_script_translations( 'restore-blocks-from-revisions-components', 'restore-blocks-from-revisions' );
-		wp_set_script_translations( 'restore-blocks-from-revisions', 'restore-blocks-from-revisions' );
+		wp_set_script_translations( 'axle-block-restore-components', 'axle-block-restore' );
+		wp_set_script_translations( 'axle-block-restore', 'axle-block-restore' );
 
-		wp_enqueue_style( 'restore-blocks-from-revisions', $url . 'editor.css', array( 'wp-components' ), VERSION );
+		wp_enqueue_style( 'axle-block-restore', $url . 'editor.css', array( 'wp-components' ), VERSION );
 	}
 }

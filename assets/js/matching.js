@@ -1,15 +1,15 @@
 /**
- * Restore Blocks from Revisions: pure helpers for matching blocks across revisions.
+ * Axle Block Restore: pure helpers for matching blocks across revisions.
  *
  * No WordPress dependencies, so the same file runs in the editor (as
- * window.restoreBlocksFromRevisions.matching) and in Node unit tests (as a module).
+ * window.axleBlockRestore.matching) and in Node unit tests (as a module).
  */
 ( function ( root, factory ) {
 	if ( typeof module === 'object' && module.exports ) {
 		module.exports = factory();
 	} else {
-		root.restoreBlocksFromRevisions = root.restoreBlocksFromRevisions || {};
-		root.restoreBlocksFromRevisions.matching = factory();
+		root.axleBlockRestore = root.axleBlockRestore || {};
+		root.axleBlockRestore.matching = factory();
 	}
 } )( typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
