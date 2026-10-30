@@ -3,7 +3,7 @@
  * Plugin Name:       Axle Block Restore
  * Plugin URI:        https://wordpress.org/plugins/axle-block-restore/
  * Description:       Restore a single block from an old revision instead of rolling back the whole post. Bring back a deleted paragraph, or an earlier version of one section, without losing later edits.
- * Version:           2.0.1
+ * Version:           3.0.0
  * Requires at least: 6.6
  * Requires PHP:      7.4
  * Author:            Aryan Jasala
@@ -19,7 +19,7 @@ namespace AryanX\Axle\BlockRestore;
 
 defined( 'ABSPATH' ) || exit;
 
-const VERSION     = '2.0.1';
+const VERSION     = '3.0.0';
 const PLUGIN_FILE = __FILE__;
 
 // PSR-4: AryanX\Axle\BlockRestore\Foo\Bar lives in src/Foo/Bar.php.
