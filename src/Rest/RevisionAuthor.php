@@ -2,18 +2,18 @@
 /**
  * Author name on revisions in the REST API.
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions\Rest;
+namespace AryanX\Axle\BlockRestore\Rest;
 
-use AryanX\Axle\RestoreBlocksFromRevisions\Plugin;
-use AryanX\Axle\RestoreBlocksFromRevisions\Service;
+use AryanX\Axle\BlockRestore\Plugin;
+use AryanX\Axle\BlockRestore\Service;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Adds `restore_blocks_from_revisions_author` to revision responses.
+ * Adds `axle_block_restore_author` to revision responses.
  *
  * Revisions only carry an author ID, and editors cannot always list users,
  * so the name comes with the revision. Revisions are only readable by people
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  */
 final class RevisionAuthor implements Service {
 
-	public const FIELD = 'restore_blocks_from_revisions_author';
+	public const FIELD = 'axle_block_restore_author';
 
 	/**
 	 * Adds the hooks.
@@ -43,7 +43,7 @@ final class RevisionAuthor implements Service {
 				array(
 					'get_callback' => array( $this, 'author_name' ),
 					'schema'       => array(
-						'description' => __( 'Display name of the revision author.', 'restore-blocks-from-revisions' ),
+						'description' => __( 'Display name of the revision author.', 'axle-block-restore' ),
 						'type'        => 'string',
 						'context'     => array( 'edit' ),
 						'readonly'    => true,

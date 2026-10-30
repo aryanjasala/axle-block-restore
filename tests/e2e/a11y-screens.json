@@ -1,6 +1,6 @@
 {
   "$comment": "Screens tests/e2e/a11y.spec.js checks with axe-core. This file belongs to the plugin: apply-template.py only writes it when it is missing. The fields are described in docs/DEVELOPMENT.md.",
-  "include": [".rbr-modal"],
+  "include": [".abr-modal"],
   "exclude": [],
   "screens": [
     {
@@ -14,7 +14,7 @@
       "steps": [
         { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
         { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
-        { "waitFor": ".rbr-modal .rbr-card" }
+        { "waitFor": ".abr-modal .abr-card" }
       ],
       "cleanup": [["post", "delete", "{post}", "--force"]]
     },
@@ -30,7 +30,7 @@
         { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
         { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
         { "fill": "role=searchbox[name=/Find text in old revisions/i]", "value": "starter back" },
-        { "waitFor": ".rbr-result" }
+        { "waitFor": ".abr-result" }
       ],
       "cleanup": [["post", "delete", "{post}", "--force"]]
     },
@@ -46,8 +46,8 @@
         { "evaluate": "window.wp.data.dispatch( 'core/block-editor' ).selectBlock( window.wp.data.select( 'core/block-editor' ).getBlocks()[ 0 ].clientId )" },
         { "click": "role=toolbar[name=/Block tools/i] >> role=button[name=/Options/i]" },
         { "click": "role=menuitem[name=/Restore from a revision…/i]" },
-        { "click": ".rbr-card >> role=button[name=/Show changes/i]" },
-        { "waitFor": ".rbr-diff" }
+        { "click": ".abr-card >> role=button[name=/Show changes/i]" },
+        { "waitFor": ".abr-diff" }
       ],
       "cleanup": [["post", "delete", "{post}", "--force"]]
     }

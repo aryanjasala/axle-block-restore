@@ -1,5 +1,5 @@
 name: Feature request
-description: An idea that would make Restore Blocks from Revisions more useful.
+description: An idea that would make Axle Block Restore more useful.
 labels: [enhancement]
 body:
   - type: textarea

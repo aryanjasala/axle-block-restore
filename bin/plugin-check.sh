@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the WordPress.org Plugin Check on the folder that would ship, the way
 # .github/workflows/plugin-check.yml does: bin/build-zip.sh first, then Plugin
-# Check (latest from WordPress.org) on dist/restore-blocks-from-revisions/ in this plugin's own Docker
+# Check (latest from WordPress.org) on dist/axle-block-restore/ in this plugin's own Docker
 # site (http://localhost:8912). Errors and warnings both fail it.
 #
 # Usage: bin/plugin-check.sh   (or npm run plugin-check)
@@ -11,10 +11,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-slug="restore-blocks-from-revisions"
+slug="axle-block-restore"
 export WP_PORT="${WP_PORT:-8912}"
 compose() { docker compose -f tests/e2e/env/docker-compose.yml "$@"; }
-# The same site with dist/restore-blocks-from-revisions/ mounted in place of the source.
+# The same site with dist/axle-block-restore/ mounted in place of the source.
 compose_dist() { docker compose -f tests/e2e/env/docker-compose.yml -f tests/e2e/env/plugin-check.yml "$@"; }
 
 bin/build-zip.sh

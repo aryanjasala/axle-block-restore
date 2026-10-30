@@ -2,12 +2,12 @@
 /**
  * Raw revision content for WordPress before 7.0.
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions\Rest;
+namespace AryanX\Axle\BlockRestore\Rest;
 
-use AryanX\Axle\RestoreBlocksFromRevisions\Service;
+use AryanX\Axle\BlockRestore\Service;
 
 defined( 'ABSPATH' ) || exit;
 

@@ -2,14 +2,14 @@
 /**
  * Plugin bootstrap.
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions;
+namespace AryanX\Axle\BlockRestore;
 
-use AryanX\Axle\RestoreBlocksFromRevisions\Editor\Assets;
-use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionAuthor;
-use AryanX\Axle\RestoreBlocksFromRevisions\Rest\RevisionContent;
+use AryanX\Axle\BlockRestore\Editor\Assets;
+use AryanX\Axle\BlockRestore\Rest\RevisionAuthor;
+use AryanX\Axle\BlockRestore\Rest\RevisionContent;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -55,13 +55,13 @@ final class Plugin {
 		);
 
 		/**
-		 * Filters the post types that get Restore Blocks from Revisions in the editor.
+		 * Filters the post types that get Axle Block Restore in the editor.
 		 *
 		 * Only post types with revisions and the editor make sense; others are dropped.
 		 *
 		 * @param string[] $post_types Default every REST-enabled post type with revisions and the editor.
 		 */
-		$filtered = (array) apply_filters( 'restore_blocks_from_revisions_post_types', $post_types );
+		$filtered = (array) apply_filters( 'axle_block_restore_post_types', $post_types );
 
 		return array_values(
 			array_filter(

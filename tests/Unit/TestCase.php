@@ -2,10 +2,10 @@
 /**
  * Base class for unit tests.
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions\Tests\Unit;
+namespace AryanX\Axle\BlockRestore\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;

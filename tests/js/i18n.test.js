@@ -5,7 +5,7 @@ const assert = require( 'node:assert' );
 const fs = require( 'fs' );
 const path = require( 'path' );
 
-const DOMAIN = "'restore-blocks-from-revisions'";
+const DOMAIN = "'axle-block-restore'";
 
 for ( const file of [ 'components.js', 'index.js' ] ) {
 	test( `${ file }: every translation call has the literal text domain`, () => {

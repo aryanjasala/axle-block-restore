@@ -2,7 +2,7 @@
 parameters:
 	level: 6
 	paths:
-		- restore-blocks-from-revisions.php
+		- axle-block-restore.php
 		- src
 	scanFiles:
 		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php

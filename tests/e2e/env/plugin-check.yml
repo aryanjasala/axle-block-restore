@@ -4,7 +4,7 @@
 services:
   wp:
     volumes:
-      - ../../../dist/restore-blocks-from-revisions:/var/www/html/wp-content/plugins/restore-blocks-from-revisions:ro
+      - ../../../dist/axle-block-restore:/var/www/html/wp-content/plugins/axle-block-restore:ro
   cli:
     volumes:
-      - ../../../dist/restore-blocks-from-revisions:/var/www/html/wp-content/plugins/restore-blocks-from-revisions:ro
+      - ../../../dist/axle-block-restore:/var/www/html/wp-content/plugins/axle-block-restore:ro

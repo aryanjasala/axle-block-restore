@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       Restore Blocks from Revisions
- * Plugin URI:        https://wordpress.org/plugins/restore-blocks-from-revisions/
+ * Plugin Name:       Axle Block Restore
+ * Plugin URI:        https://wordpress.org/plugins/axle-block-restore/
  * Description:       Restore a single block from an old revision instead of rolling back the whole post. Bring back a deleted paragraph, or an earlier version of one section, without losing later edits.
  * Version:           2.0.1
  * Requires at least: 6.6
@@ -10,19 +10,19 @@
  * Author URI:        https://profiles.wordpress.org/aryanjasala/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       restore-blocks-from-revisions
+ * Text Domain:       axle-block-restore
  *
- * @package AryanX\Axle\RestoreBlocksFromRevisions
+ * @package AryanX\Axle\BlockRestore
  */
 
-namespace AryanX\Axle\RestoreBlocksFromRevisions;
+namespace AryanX\Axle\BlockRestore;
 
 defined( 'ABSPATH' ) || exit;
 
 const VERSION     = '2.0.1';
 const PLUGIN_FILE = __FILE__;
 
-// PSR-4: AryanX\Axle\RestoreBlocksFromRevisions\Foo\Bar lives in src/Foo/Bar.php.
+// PSR-4: AryanX\Axle\BlockRestore\Foo\Bar lives in src/Foo/Bar.php.
 spl_autoload_register(
 	static function ( $class_name ) {
 		$prefix = __NAMESPACE__ . '\\';

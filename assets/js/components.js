@@ -1,7 +1,7 @@
 /**
- * Restore Blocks from Revisions: the restore window and its parts.
+ * Axle Block Restore: the restore window and its parts.
  *
- * Exposes window.restoreBlocksFromRevisions.RestoreModal. Matching logic lives in
+ * Exposes window.axleBlockRestore.RestoreModal. Matching logic lives in
  * matching.js so it can be unit tested without WordPress.
  */
 ( function ( wp, matching ) {
@@ -30,7 +30,7 @@
 		 *
 		 * @param {number} perPage Default 50.
 		 */
-		return Math.min( 100, Math.max( 1, parseInt( applyFilters( 'restoreBlocksFromRevisions.revisionsPerPage', 50 ), 10 ) || 50 ) );
+		return Math.min( 100, Math.max( 1, parseInt( applyFilters( 'axleBlockRestore.revisionsPerPage', 50 ), 10 ) || 50 ) );
 	}
 	const MAX_CANDIDATES = 6;
 
@@ -95,7 +95,7 @@
 					context: 'edit',
 					per_page: PER_PAGE,
 					page,
-					_fields: 'id,date_gmt,slug,content.raw,restore_blocks_from_revisions_author',
+					_fields: 'id,date_gmt,slug,content.raw,axle_block_restore_author',
 				} ),
 			} )
 				.then( ( items ) => {
@@ -106,7 +106,7 @@
 					} );
 					setHasMore( items.length === PER_PAGE );
 				} )
-				.catch( ( fetchError ) => setError( fetchError.message || __( 'Could not load revisions.', 'restore-blocks-from-revisions' ) ) )
+				.catch( ( fetchError ) => setError( fetchError.message || __( 'Could not load revisions.', 'axle-block-restore' ) ) )
 				.finally( () => setLoading( false ) );
 		}, [ post.id, post.restBase, post.restNamespace, page ] );
 
@@ -150,7 +150,7 @@
 	function DiffView( { before, after } ) {
 		return el(
 			'p',
-			{ className: 'rbr-diff', 'aria-label': __( 'Changes this restore would make', 'restore-blocks-from-revisions' ) },
+			{ className: 'abr-diff', 'aria-label': __( 'Changes this restore would make', 'axle-block-restore' ) },
 			matching.wordDiff( before, after ).map( ( part, index ) => {
 				if ( 'same' === part.type ) {
 					return part.text;
@@ -182,24 +182,24 @@
 
 		return el(
 			'div',
-			{ className: 'rbr-card' + ( focused ? ' is-focused' : '' ), ref },
+			{ className: 'abr-card' + ( focused ? ' is-focused' : '' ), ref },
 			el(
 				'div',
-				{ className: 'rbr-card__head' },
+				{ className: 'abr-card__head' },
 				el( 'strong', null, item.title ),
-				status && el( 'span', { className: 'rbr-badge rbr-badge--' + status.type }, status.label )
+				status && el( 'span', { className: 'abr-badge abr-badge--' + status.type }, status.label )
 			),
 			item.text
-				? el( 'p', { className: 'rbr-card__excerpt' }, el( Highlight, { text: matching.excerpt( item.text, query, 240 ), query } ) )
-				: el( 'p', { className: 'rbr-card__excerpt is-empty' }, __( 'No text in this block.', 'restore-blocks-from-revisions' ) ),
+				? el( 'p', { className: 'abr-card__excerpt' }, el( Highlight, { text: matching.excerpt( item.text, query, 240 ), query } ) )
+				: el( 'p', { className: 'abr-card__excerpt is-empty' }, __( 'No text in this block.', 'axle-block-restore' ) ),
 			'diff' === view && el( DiffView, { before: compareText, after: item.text } ),
-			'preview' === view && el( 'div', { className: 'rbr-card__preview' }, el( BlockPreview, { blocks: previewBlocks, viewportWidth: 800 } ) ),
+			'preview' === view && el( 'div', { className: 'abr-card__preview' }, el( BlockPreview, { blocks: previewBlocks, viewportWidth: 800 } ) ),
 			el(
 				'div',
-				{ className: 'rbr-card__actions' },
+				{ className: 'abr-card__actions' },
 				actions,
-				canDiff && el( Button, { variant: 'tertiary', isPressed: 'diff' === view, onClick: () => toggle( 'diff' ) }, __( 'Show changes', 'restore-blocks-from-revisions' ) ),
-				el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'restore-blocks-from-revisions' ) )
+				canDiff && el( Button, { variant: 'tertiary', isPressed: 'diff' === view, onClick: () => toggle( 'diff' ) }, __( 'Show changes', 'axle-block-restore' ) ),
+				el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'axle-block-restore' ) )
 			)
 		);
 	}
@@ -218,16 +218,16 @@
 
 		if ( ! ranked.length ) {
 			/* translators: %s: block type, e.g. "Paragraph". */
-			return el( 'p', null, sprintf( __( 'This revision has no %s blocks.', 'restore-blocks-from-revisions' ), target.title ) );
+			return el( 'p', null, sprintf( __( 'This revision has no %s blocks.', 'axle-block-restore' ), target.title ) );
 		}
 
 		return el(
 			Fragment,
 			null,
-			! different.length && el( Notice, { status: 'info', isDismissible: false }, __( 'This block is the same in this revision as it is now.', 'restore-blocks-from-revisions' ) ),
+			! different.length && el( Notice, { status: 'info', isDismissible: false }, __( 'This block is the same in this revision as it is now.', 'axle-block-restore' ) ),
 			ranked.length !== different.length &&
 				el( ToggleControl, {
-					label: __( 'Also show versions that match the current block', 'restore-blocks-from-revisions' ),
+					label: __( 'Also show versions that match the current block', 'axle-block-restore' ),
 					checked: showSame,
 					onChange: setShowSame,
 					__nextHasNoMarginBottom: true,
@@ -240,17 +240,17 @@
 					focused: focusText === item.text,
 					compareText: target.text,
 					status: item.same
-						? { type: 'same', label: __( 'Same as now', 'restore-blocks-from-revisions' ) }
+						? { type: 'same', label: __( 'Same as now', 'axle-block-restore' ) }
 						: 0 === index && item.samePosition
-						? { type: 'match', label: __( 'Best match', 'restore-blocks-from-revisions' ) }
+						? { type: 'match', label: __( 'Best match', 'axle-block-restore' ) }
 						: null,
 					actions: item.same
 						? null
 						: el(
 								Fragment,
 								null,
-								el( Button, { variant: 'primary', onClick: () => onReplace( item.block ) }, __( 'Replace current block', 'restore-blocks-from-revisions' ) ),
-								el( Button, { variant: 'secondary', onClick: () => onInsertAfter( item.block ) }, __( 'Insert below it', 'restore-blocks-from-revisions' ) )
+								el( Button, { variant: 'primary', onClick: () => onReplace( item.block ) }, __( 'Replace current block', 'axle-block-restore' ) ),
+								el( Button, { variant: 'secondary', onClick: () => onInsertAfter( item.block ) }, __( 'Insert below it', 'axle-block-restore' ) )
 						  ),
 				} )
 			)
@@ -270,9 +270,9 @@
 		const differing = items.filter( ( row ) => 'same' !== row.status );
 		const shown = showAll ? items : differing;
 		const labels = {
-			same: __( 'Same as now', 'restore-blocks-from-revisions' ),
-			changed: __( 'Changed since', 'restore-blocks-from-revisions' ),
-			missing: __( 'Not in the post now', 'restore-blocks-from-revisions' ),
+			same: __( 'Same as now', 'axle-block-restore' ),
+			changed: __( 'Changed since', 'axle-block-restore' ),
+			missing: __( 'Not in the post now', 'axle-block-restore' ),
 		};
 
 		return el(
@@ -280,21 +280,21 @@
 			null,
 			el(
 				'p',
-				{ className: 'rbr-summary' },
+				{ className: 'abr-summary' },
 				sprintf(
 					/* translators: 1: blocks in the revision, 2: how many differ from now. */
-					_n( '%1$d block in this revision, %2$d different from now.', '%1$d blocks in this revision, %2$d different from now.', items.length, 'restore-blocks-from-revisions' ),
+					_n( '%1$d block in this revision, %2$d different from now.', '%1$d blocks in this revision, %2$d different from now.', items.length, 'axle-block-restore' ),
 					items.length,
 					differing.length
 				)
 			),
 			el( ToggleControl, {
-				label: __( 'Show unchanged blocks too', 'restore-blocks-from-revisions' ),
+				label: __( 'Show unchanged blocks too', 'axle-block-restore' ),
 				checked: showAll,
 				onChange: setShowAll,
 				__nextHasNoMarginBottom: true,
 			} ),
-			! shown.length && el( Notice, { status: 'info', isDismissible: false }, __( 'Every block in this revision is the same as in the post now.', 'restore-blocks-from-revisions' ) ),
+			! shown.length && el( Notice, { status: 'info', isDismissible: false }, __( 'Every block in this revision is the same as in the post now.', 'axle-block-restore' ) ),
 			shown.map( ( row ) =>
 				el( BlockCard, {
 					key: row.index,
@@ -310,11 +310,11 @@
 									Fragment,
 									null,
 									'changed' === row.status &&
-										el( Button, { variant: 'primary', onClick: () => onReplaceAt( row.item.block, row.index ) }, __( 'Replace current version', 'restore-blocks-from-revisions' ) ),
+										el( Button, { variant: 'primary', onClick: () => onReplaceAt( row.item.block, row.index ) }, __( 'Replace current version', 'axle-block-restore' ) ),
 									el(
 										Button,
 										{ variant: 'missing' === row.status ? 'primary' : 'secondary', onClick: () => onInsertAt( row.item.block, row.index ) },
-										'missing' === row.status ? __( 'Restore it here', 'restore-blocks-from-revisions' ) : __( 'Insert as a copy', 'restore-blocks-from-revisions' )
+										'missing' === row.status ? __( 'Restore it here', 'axle-block-restore' ) : __( 'Insert as a copy', 'axle-block-restore' )
 									)
 							  ),
 				} )
@@ -330,32 +330,32 @@
 	 */
 	function SearchResults( { results, revisionsById, labelFor, query, onPick } ) {
 		if ( ! results.length ) {
-			return el( 'p', { className: 'rbr-search-empty' }, __( 'No block in the loaded revisions contains that text.', 'restore-blocks-from-revisions' ) );
+			return el( 'p', { className: 'abr-search-empty' }, __( 'No block in the loaded revisions contains that text.', 'axle-block-restore' ) );
 		}
 
 		return el(
 			'ul',
-			{ className: 'rbr-results', 'aria-label': __( 'Search results', 'restore-blocks-from-revisions' ) },
+			{ className: 'abr-results', 'aria-label': __( 'Search results', 'axle-block-restore' ) },
 			results.map( ( result, index ) => {
 				const newest = revisionsById[ result.revisionIds[ 0 ] ];
 				const type = getBlockType( result.name );
 
 				return el(
 					'li',
-					{ key: index, className: 'rbr-result' },
-					el( 'p', { className: 'rbr-result__text' }, el( Highlight, { text: matching.excerpt( result.text, query, 200 ), query } ) ),
+					{ key: index, className: 'abr-result' },
+					el( 'p', { className: 'abr-result__text' }, el( Highlight, { text: matching.excerpt( result.text, query, 200 ), query } ) ),
 					el(
 						'p',
-						{ className: 'rbr-result__meta' },
+						{ className: 'abr-result__meta' },
 						sprintf(
 							/* translators: 1: block type, 2: number of revisions, 3: date of the newest one. */
-							_n( '%1$s in %2$d revision, newest %3$s', '%1$s in %2$d revisions, newest %3$s', result.revisionIds.length, 'restore-blocks-from-revisions' ),
+							_n( '%1$s in %2$d revision, newest %3$s', '%1$s in %2$d revisions, newest %3$s', result.revisionIds.length, 'axle-block-restore' ),
 							type ? type.title : result.name,
 							result.revisionIds.length,
 							labelFor( newest, true )
 						)
 					),
-					el( Button, { variant: 'secondary', onClick: () => onPick( result ) }, __( 'Show in revision', 'restore-blocks-from-revisions' ) )
+					el( Button, { variant: 'secondary', onClick: () => onPick( result ) }, __( 'Show in revision', 'axle-block-restore' ) )
 				);
 			} )
 		);
@@ -452,14 +452,14 @@
 			}
 			// date_gmt has no zone marker; adding "Z" makes it UTC, and dateI18n shows it in the site's time zone.
 			const parts = [ dateI18n( dateFormat, revision.date_gmt + 'Z' ) ];
-			if ( ! short && revision.restore_blocks_from_revisions_author ) {
-				parts.push( revision.restore_blocks_from_revisions_author );
+			if ( ! short && revision.axle_block_restore_author ) {
+				parts.push( revision.axle_block_restore_author );
 			}
 			return parts.join( ' · ' );
 		};
 
 		const selected = revisionsById[ selectedId ];
-		const restored = __( 'Block restored. Save the post to keep it, or press Ctrl+Z (⌘Z) to undo.', 'restore-blocks-from-revisions' );
+		const restored = __( 'Block restored. Save the post to keep it, or press Ctrl+Z (⌘Z) to undo.', 'axle-block-restore' );
 		const done = ( mode, block ) => {
 			createSuccessNotice( restored, { type: 'snackbar' } );
 
@@ -472,7 +472,7 @@
 			 * @param {number} details.revisionId Revision it came from.
 			 * @param {number} details.postId     Post being edited.
 			 */
-			doAction( 'restoreBlocksFromRevisions.restored', { mode, block, revisionId: selectedId, postId: data.post.id } );
+			doAction( 'axleBlockRestore.restored', { mode, block, revisionId: selectedId, postId: data.post.id } );
 			onClose();
 		};
 
@@ -494,7 +494,7 @@
 				setSelectedId( next.id );
 				setFocusText( '' );
 				window.requestAnimationFrame( () => {
-					const option = document.getElementById( 'rbr-revision-' + next.id );
+					const option = document.getElementById( 'abr-revision-' + next.id );
 					if ( option ) {
 						option.focus();
 					}
@@ -506,7 +506,7 @@
 		if ( error ) {
 			body = el( Notice, { status: 'error', isDismissible: false }, error );
 		} else if ( ! loading && ! revisions.length ) {
-			body = el( 'p', null, __( 'This post has no revisions yet. WordPress saves one each time the post is updated.', 'restore-blocks-from-revisions' ) );
+			body = el( 'p', null, __( 'This post has no revisions yet. WordPress saves one each time the post is updated.', 'axle-block-restore' ) );
 		} else if ( ! selected ) {
 			body = el( Spinner );
 		} else if ( target ) {
@@ -554,20 +554,20 @@
 			{
 				title: target
 					/* translators: %s: block type, e.g. "Paragraph". */
-					? sprintf( __( 'Restore this %s from a revision', 'restore-blocks-from-revisions' ), target.title )
-					: __( 'Restore blocks from a revision', 'restore-blocks-from-revisions' ),
+					? sprintf( __( 'Restore this %s from a revision', 'axle-block-restore' ), target.title )
+					: __( 'Restore blocks from a revision', 'axle-block-restore' ),
 				onRequestClose: onClose,
 				size: 'large',
-				className: 'rbr-modal',
+				className: 'abr-modal',
 			},
 			el(
 				'div',
-				{ className: 'rbr-search' },
+				{ className: 'abr-search' },
 				el( SearchControl, {
-					label: __( 'Find text in old revisions', 'restore-blocks-from-revisions' ),
+					label: __( 'Find text in old revisions', 'axle-block-restore' ),
 					placeholder: target
-						? __( 'Find an old version of this block by its text…', 'restore-blocks-from-revisions' )
-						: __( 'Find deleted or changed text…', 'restore-blocks-from-revisions' ),
+						? __( 'Find an old version of this block by its text…', 'axle-block-restore' )
+						: __( 'Find deleted or changed text…', 'axle-block-restore' ),
 					value: input,
 					onChange: setInput,
 					__nextHasNoMarginBottom: true,
@@ -588,13 +588,13 @@
 				  } )
 				: el(
 						'div',
-						{ className: 'rbr-layout' },
+						{ className: 'abr-layout' },
 						el(
 							'div',
 							{
-								className: 'rbr-revisions',
+								className: 'abr-revisions',
 								role: 'listbox',
-								'aria-label': __( 'Revisions', 'restore-blocks-from-revisions' ),
+								'aria-label': __( 'Revisions', 'axle-block-restore' ),
 								onKeyDown: moveSelection,
 							},
 							revisions.map( ( revision ) => {
@@ -605,37 +605,37 @@
 									Button,
 									{
 										key: revision.id,
-										id: 'rbr-revision-' + revision.id,
+										id: 'abr-revision-' + revision.id,
 										role: 'option',
 										'aria-selected': revision.id === selectedId,
 										// Only the selected option is in the tab order; the arrow keys reach the rest.
 										tabIndex: revision.id === selectedId ? 0 : -1,
-										className: 'rbr-revision' + ( revision.id === selectedId ? ' is-selected' : '' ),
+										className: 'abr-revision' + ( revision.id === selectedId ? ' is-selected' : '' ),
 										onClick: () => {
 											setSelectedId( revision.id );
 											setFocusText( '' );
 										},
 									},
-									el( 'span', { className: 'rbr-revision__date' }, labelFor( revision ) ),
+									el( 'span', { className: 'abr-revision__date' }, labelFor( revision ) ),
 									el(
 										'span',
-										{ className: 'rbr-revision__meta' },
-										isAutosave && el( 'span', { className: 'rbr-tag' }, __( 'Autosave', 'restore-blocks-from-revisions' ) ),
+										{ className: 'abr-revision__meta' },
+										isAutosave && el( 'span', { className: 'abr-tag' }, __( 'Autosave', 'axle-block-restore' ) ),
 										count
 											/* translators: %d: number of differences. */
-											? sprintf( _n( '%d difference', '%d differences', count, 'restore-blocks-from-revisions' ), count )
-											: __( 'Same as now', 'restore-blocks-from-revisions' )
+											? sprintf( _n( '%d difference', '%d differences', count, 'axle-block-restore' ), count )
+											: __( 'Same as now', 'axle-block-restore' )
 									)
 								);
 							} ),
 							loading && el( Spinner ),
-							hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', 'restore-blocks-from-revisions' ) )
+							hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', 'axle-block-restore' ) )
 						),
-						el( 'div', { className: 'rbr-blocks' }, body )
+						el( 'div', { className: 'abr-blocks' }, body )
 				  )
 		);
 	}
 
-	window.restoreBlocksFromRevisions = window.restoreBlocksFromRevisions || {};
-	window.restoreBlocksFromRevisions.RestoreModal = RestoreModal;
-} )( window.wp, window.restoreBlocksFromRevisions.matching );
+	window.axleBlockRestore = window.axleBlockRestore || {};
+	window.axleBlockRestore.RestoreModal = RestoreModal;
+} )( window.wp, window.axleBlockRestore.matching );

@@ -1,5 +1,5 @@
 {
-  "name": "restore-blocks-from-revisions",
+  "name": "axle-block-restore",
   "private": true,
   "description": "Restore a single block from an old WordPress revision.",
   "license": "GPL-2.0-or-later",

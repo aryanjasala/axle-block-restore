@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="Restore Blocks from Revisions">
-	<description>WordPress coding standards for Restore Blocks from Revisions.</description>
+<ruleset name="Axle Block Restore">
+	<description>WordPress coding standards for Axle Block Restore.</description>
 
 	<file>.</file>
 	<exclude-pattern>/vendor/*</exclude-pattern>
@@ -24,7 +24,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="restore-blocks-from-revisions"/>
+				<element value="axle-block-restore"/>
 			</property>
 		</properties>
 	</rule>
@@ -32,8 +32,8 @@
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">
-				<element value="AryanX\Axle\RestoreBlocksFromRevisions"/>
-				<element value="restore_blocks_from_revisions"/>
+				<element value="AryanX\Axle\BlockRestore"/>
+				<element value="axle_block_restore"/>
 			</property>
 		</properties>
 	</rule>

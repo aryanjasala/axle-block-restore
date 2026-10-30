@@ -1,7 +1,7 @@
 {
 	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
 	"meta": {
-		"title": "Restore Blocks from Revisions demo",
+		"title": "Axle Block Restore demo",
 		"author": "aryanjasala"
 	},
 	"landingPage": "/wp-admin/post.php?post=100&action=edit",
@@ -18,12 +18,12 @@
 			"step": "installPlugin",
 			"pluginData": {
 				"resource": "git:directory",
-				"url": "https://github.com/aryanjasala/restore-blocks-from-revisions",
+				"url": "https://github.com/aryanjasala/axle-block-restore",
 				"ref": "main"
 			},
 			"options": {
 				"activate": true,
-				"targetFolderName": "restore-blocks-from-revisions"
+				"targetFolderName": "axle-block-restore"
 			}
 		},
 		{
