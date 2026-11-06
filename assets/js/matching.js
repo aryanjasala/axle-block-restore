@@ -251,6 +251,283 @@
 		return out;
 	}
 
+	// Attributes that style a block rather than say something. Everything else with a markup source or `role: content` is content.
+	var STYLE_ATTRIBUTES = [ 'style', 'className', 'align', 'layout', 'backgroundColor', 'textColor', 'fontSize', 'fontFamily', 'gradient', 'borderColor' ];
+
+	// Attributes a partial restore never touches: the block keeps its own.
+	var KEEP_ATTRIBUTES = [ 'lock', 'metadata' ];
+
+	// Sources that read text or markup out of the saved HTML.
+	var CONTENT_SOURCES = [ 'html', 'rich-text', 'text', 'children', 'node', 'query' ];
+
+	/**
+	 * Whether an attribute is content, style, or left alone by a partial restore.
+	 *
+	 * `role: content` (core's own block.json metadata) and text sources are
+	 * content. The listed style attributes are style. Any other attribute
+	 * counts as style, because it changes how the block looks or behaves, not
+	 * what it says.
+	 *
+	 * @param {string}   name         Attribute name.
+	 * @param {Object}   [schema]     The attribute's block.json definition.
+	 * @param {string[]} [styleNames] Style attribute names. Default STYLE_ATTRIBUTES.
+	 * @return {string} "content", "style" or "keep".
+	 */
+	function attributeRole( name, schema, styleNames ) {
+		var styles = styleNames || STYLE_ATTRIBUTES;
+
+		if ( KEEP_ATTRIBUTES.indexOf( name ) !== -1 || ( schema && 'local' === schema.role ) ) {
+			return 'keep';
+		}
+		if ( styles.indexOf( name ) !== -1 ) {
+			return 'style';
+		}
+		if ( schema && ( 'content' === schema.role || CONTENT_SOURCES.indexOf( schema.source ) !== -1 ) ) {
+			return 'content';
+		}
+		return 'style';
+	}
+
+	/**
+	 * A value in a form that compares and prints the same every time.
+	 *
+	 * @param {*} value Attribute value or block part.
+	 * @return {*} Value with sorted keys, and rich text as its HTML.
+	 */
+	function stable( value ) {
+		if ( value && 'function' === typeof value.toHTMLString ) {
+			return value.toHTMLString();
+		}
+		if ( Array.isArray( value ) ) {
+			return value.map( stable );
+		}
+		if ( value && 'object' === typeof value ) {
+			return Object.keys( value )
+				.sort()
+				.reduce( function ( out, key ) {
+					if ( undefined !== value[ key ] ) {
+						out[ key ] = stable( value[ key ] );
+					}
+					return out;
+				}, {} );
+		}
+		return value;
+	}
+
+	/**
+	 * The block's own type and attributes as a string, without its inner blocks.
+	 *
+	 * @param {{name: string, attributes: Object}} block Block.
+	 * @return {string} Fingerprint.
+	 */
+	function shallowSignature( block ) {
+		return JSON.stringify( [ block.name, stable( block.attributes || {} ) ] );
+	}
+
+	/**
+	 * The block, attributes and inner blocks as a string. Equal strings mean equal blocks.
+	 *
+	 * Client IDs and other editor bookkeeping are left out.
+	 *
+	 * @param {{name: string, attributes: Object, innerBlocks: Array}} block Block.
+	 * @return {string} Fingerprint.
+	 */
+	function signature( block ) {
+		return JSON.stringify( [ block.name, stable( block.attributes || {} ), ( block.innerBlocks || [] ).map( signature ) ] );
+	}
+
+	/**
+	 * The block as it would be after restoring all of it, only its content, or only its styling.
+	 *
+	 * "content" takes the revision's content attributes and inner blocks and
+	 * keeps the current style. "style" takes the revision's style attributes and
+	 * keeps the current content and inner blocks. Attributes with the role
+	 * "keep" stay as they are now in both.
+	 *
+	 * @param {{name: string, attributes: Object, innerBlocks: Array}} current Block in the editor.
+	 * @param {{name: string, attributes: Object, innerBlocks: Array}} old     Block in the revision.
+	 * @param {string}                                                   mode    "replace", "content" or "style".
+	 * @param {function(string): string}                                 roleFor Role of an attribute name.
+	 * @return {{name: string, attributes: Object, innerBlocks: Array}} Result, sharing inner blocks with the inputs.
+	 */
+	function mergeBlock( current, old, mode, roleFor ) {
+		var from = 'content' === mode ? 'content' : 'style';
+		var attributes = {};
+
+		if ( 'replace' === mode ) {
+			return { name: old.name, attributes: Object.assign( {}, old.attributes ), innerBlocks: old.innerBlocks || [] };
+		}
+
+		Object.keys( Object.assign( {}, old.attributes, current.attributes ) ).forEach( function ( key ) {
+			var source = roleFor( key ) === from ? old : current;
+			if ( source.attributes && undefined !== source.attributes[ key ] ) {
+				attributes[ key ] = source.attributes[ key ];
+			}
+		} );
+
+		return {
+			name: current.name,
+			attributes: attributes,
+			innerBlocks: 'content' === mode ? old.innerBlocks || [] : current.innerBlocks || [],
+		};
+	}
+
+	/**
+	 * Attributes whose value differs between two blocks, with how each is classified.
+	 *
+	 * @param {{attributes: Object}}     before  Block now.
+	 * @param {{attributes: Object}}     after   Block after a restore.
+	 * @param {function(string): string} roleFor Role of an attribute name.
+	 * @return {Array<{name: string, role: string, before: *, after: *}>} Changed attributes.
+	 */
+	function changedAttributes( before, after, roleFor ) {
+		return Object.keys( Object.assign( {}, before.attributes, after.attributes ) )
+			.filter( function ( key ) {
+				return JSON.stringify( stable( ( before.attributes || {} )[ key ] ) ) !== JSON.stringify( stable( ( after.attributes || {} )[ key ] ) );
+			} )
+			.map( function ( key ) {
+				return { name: key, role: roleFor( key ), before: stable( ( before.attributes || {} )[ key ] ), after: stable( ( after.attributes || {} )[ key ] ) };
+			} );
+	}
+
+	/**
+	 * How many blocks a block holds, itself included.
+	 *
+	 * @param {{innerBlocks: Array}} block Block.
+	 * @return {number} Count.
+	 */
+	function countBlocks( block ) {
+		return ( block.innerBlocks || [] ).reduce( function ( total, inner ) {
+			return total + countBlocks( inner );
+		}, 1 );
+	}
+
+	/**
+	 * What differs inside a block between a revision and now.
+	 *
+	 * Inner blocks that are identical drop out first. In what is left, blocks of the
+	 * same type pair up in order and count as changed (their own settings differ,
+	 * and their children are compared in turn). Blocks left over in the revision
+	 * are added, blocks left over now are removed.
+	 *
+	 * Each entry says where it sits as paths of child indexes from the compared
+	 * block: `oldPath` in the revision, `curPath` now. An added block also has
+	 * `parentPath` (the current block that would hold it) and `index` (where).
+	 *
+	 * @param {{innerBlocks: Array}}      old Block in the revision.
+	 * @param {{innerBlocks: Array}|null} cur Block now, or null when it is not in the post.
+	 * @return {Array<{type: string, oldBlock: Object, curBlock: Object, oldPath: number[], curPath: number[], parentPath: number[], index: number}>} Differences, in document order.
+	 */
+	function diffTree( old, cur ) {
+		var out = [];
+
+		function compare( oldList, curList, oldBase, curBase ) {
+			var a = oldList.map( signature );
+			var b = curList.map( signature );
+			var table = [];
+			var i;
+			var j;
+			var anchors = [];
+
+			for ( i = 0; i <= a.length; i++ ) {
+				table.push( new Array( b.length + 1 ).fill( 0 ) );
+			}
+			for ( i = a.length - 1; i >= 0; i-- ) {
+				for ( j = b.length - 1; j >= 0; j-- ) {
+					table[ i ][ j ] = a[ i ] === b[ j ] ? table[ i + 1 ][ j + 1 ] + 1 : Math.max( table[ i + 1 ][ j ], table[ i ][ j + 1 ] );
+				}
+			}
+			i = 0;
+			j = 0;
+			while ( i < a.length && j < b.length ) {
+				if ( a[ i ] === b[ j ] ) {
+					anchors.push( [ i, j ] );
+					i++;
+					j++;
+				} else if ( table[ i + 1 ][ j ] >= table[ i ][ j + 1 ] ) {
+					i++;
+				} else {
+					j++;
+				}
+			}
+			anchors.push( [ a.length, b.length ] );
+
+			var oldAt = 0;
+			var curAt = 0;
+			anchors.forEach( function ( anchor ) {
+				var pointer = curAt;
+				var k;
+
+				for ( i = oldAt; i < anchor[ 0 ]; i++ ) {
+					for ( k = pointer; k < anchor[ 1 ] && curList[ k ].name !== oldList[ i ].name; k++ ) {} // eslint-disable-line no-empty
+					if ( k < anchor[ 1 ] ) {
+						for ( j = pointer; j < k; j++ ) {
+							out.push( { type: 'removed', curBlock: curList[ j ], curPath: curBase.concat( j ) } );
+						}
+						if ( shallowSignature( oldList[ i ] ) !== shallowSignature( curList[ k ] ) ) {
+							out.push( { type: 'changed', oldBlock: oldList[ i ], curBlock: curList[ k ], oldPath: oldBase.concat( i ), curPath: curBase.concat( k ) } );
+						}
+						compare( oldList[ i ].innerBlocks || [], curList[ k ].innerBlocks || [], oldBase.concat( i ), curBase.concat( k ) );
+						pointer = k + 1;
+					} else {
+						out.push( { type: 'added', oldBlock: oldList[ i ], oldPath: oldBase.concat( i ), parentPath: curBase, index: pointer } );
+					}
+				}
+				for ( j = pointer; j < anchor[ 1 ]; j++ ) {
+					out.push( { type: 'removed', curBlock: curList[ j ], curPath: curBase.concat( j ) } );
+				}
+				oldAt = anchor[ 0 ] + 1;
+				curAt = anchor[ 1 ] + 1;
+			} );
+		}
+
+		compare( old.innerBlocks || [], cur ? cur.innerBlocks || [] : [], [], [] );
+
+		return out;
+	}
+
+	/**
+	 * Counts of added, removed and changed blocks in a tree diff.
+	 *
+	 * An added or removed block counts with everything inside it.
+	 *
+	 * @param {Array<{type: string, oldBlock: Object, curBlock: Object}>} entries Result of diffTree().
+	 * @return {{added: number, removed: number, changed: number}} Counts.
+	 */
+	function summarizeDiff( entries ) {
+		var counts = { added: 0, removed: 0, changed: 0 };
+
+		entries.forEach( function ( entry ) {
+			if ( 'added' === entry.type ) {
+				counts.added += countBlocks( entry.oldBlock );
+			} else if ( 'removed' === entry.type ) {
+				counts.removed += countBlocks( entry.curBlock );
+			} else {
+				counts.changed++;
+			}
+		} );
+
+		return counts;
+	}
+
+	/**
+	 * The block at a path of child indexes below a block.
+	 *
+	 * @param {{innerBlocks: Array}} root Block.
+	 * @param {number[]}             path Child indexes, empty for the block itself.
+	 * @return {Object|null} Block, or null when the path leads nowhere.
+	 */
+	function blockAt( root, path ) {
+		var block = root;
+		var i;
+
+		for ( i = 0; block && i < path.length; i++ ) {
+			block = ( block.innerBlocks || [] )[ path[ i ] ];
+		}
+
+		return block || null;
+	}
+
 	/**
 	 * Finds text in revisions. Identical blocks in several revisions are grouped.
 	 *
@@ -321,5 +598,15 @@
 		wordDiff: wordDiff,
 		search: search,
 		excerpt: excerpt,
+		STYLE_ATTRIBUTES: STYLE_ATTRIBUTES,
+		attributeRole: attributeRole,
+		signature: signature,
+		shallowSignature: shallowSignature,
+		mergeBlock: mergeBlock,
+		changedAttributes: changedAttributes,
+		countBlocks: countBlocks,
+		diffTree: diffTree,
+		summarizeDiff: summarizeDiff,
+		blockAt: blockAt,
 	};
 } );

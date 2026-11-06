@@ -34,22 +34,26 @@ final class RevisionAuthor implements Service {
 	 * Registers the field for each post type's revisions.
 	 *
 	 * The revisions controller names its object type "{post type}-revision".
+	 * Template and template part revisions are prepared like templates, so
+	 * their object type is the post type itself.
 	 */
 	public function register_field(): void {
-		foreach ( Plugin::post_types() as $post_type ) {
-			register_rest_field(
-				$post_type . '-revision',
-				self::FIELD,
-				array(
-					'get_callback' => array( $this, 'author_name' ),
-					'schema'       => array(
-						'description' => __( 'Display name of the revision author.', 'axle-block-restore' ),
-						'type'        => 'string',
-						'context'     => array( 'edit' ),
-						'readonly'    => true,
-					),
-				)
-			);
+		$args = array(
+			'get_callback' => array( $this, 'author_name' ),
+			'schema'       => array(
+				'description' => __( 'Display name of the revision author.', 'axle-block-restore' ),
+				'type'        => 'string',
+				'context'     => array( 'edit' ),
+				'readonly'    => true,
+			),
+		);
+
+		foreach ( Plugin::all_post_types() as $post_type ) {
+			register_rest_field( $post_type . '-revision', self::FIELD, $args );
+
+			if ( in_array( $post_type, array( 'wp_template', 'wp_template_part' ), true ) ) {
+				register_rest_field( $post_type, self::FIELD, $args );
+			}
 		}
 	}
 
@@ -60,7 +64,8 @@ final class RevisionAuthor implements Service {
 	 * @return string
 	 */
 	public function author_name( array $revision ): string {
-		$user = get_userdata( (int) ( $revision['author'] ?? get_post_field( 'post_author', (int) $revision['id'] ) ) );
+		$author = $revision['author'] ?? get_post_field( 'post_author', (int) ( $revision['wp_id'] ?? $revision['id'] ?? 0 ) );
+		$user   = get_userdata( (int) $author );
 
 		return $user ? $user->display_name : '';
 	}
