@@ -1,3 +1,4 @@
+/* Layout only. Colours, badges, cards and buttons come from @wordpress/components. */
 .abr-modal .components-modal__content {
 	padding-bottom: 0;
 }
@@ -19,7 +20,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
-	border-right: 1px solid #e0e0e0;
 	padding-right: 16px;
 	max-height: 66vh;
 	overflow-y: auto;
@@ -43,29 +43,10 @@
 }
 
 .abr-revision__meta {
-	font-size: 12px;
-	color: #757575;
-}
-
-.abr-revisions .abr-revision.is-selected {
-	background: var(--wp-admin-theme-color, #3858e9);
-	color: #fff;
-}
-
-.abr-revisions .abr-revision.is-selected .abr-revision__meta {
-	/* Full white: the 85% white it had stayed under 4.5:1 on the admin theme colors. */
-	color: #fff;
-}
-
-.abr-tag {
-	display: inline-block;
-	margin-right: 6px;
-	padding: 0 5px;
-	border: 1px solid currentColor;
-	border-radius: 2px;
-	font-size: 10px;
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
 }
 
 /* Blocks of the selected revision */
@@ -75,140 +56,92 @@
 	padding: 0 4px 24px 0;
 }
 
-.abr-summary {
-	margin-top: 0;
-	color: #757575;
-}
-
-.abr-card {
-	border: 1px solid #e0e0e0;
-	border-radius: 4px;
-	padding: 12px 16px;
+.abr-blocks .abr-card {
 	margin: 12px 0;
-	transition: box-shadow 0.2s;
 }
 
-.abr-card.is-focused {
-	border-color: var(--wp-admin-theme-color, #3858e9);
-	box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #3858e9);
-}
-
-.abr-card__head {
+.abr-card__badges {
 	display: flex;
-	align-items: center;
+	flex-wrap: wrap;
 	gap: 8px;
 }
 
-.abr-card__excerpt {
-	margin: 6px 0 8px;
-}
-
-.abr-card__excerpt.is-empty {
-	color: #757575;
-	font-style: italic;
+.abr-card__excerpt,
+.abr-card__meta {
+	margin: 0 0 8px;
 }
 
 .abr-card__preview {
 	max-height: 260px;
 	overflow: hidden;
-	border: 1px solid #f0f0f0;
 	margin-bottom: 8px;
 }
 
 .abr-card__actions {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: 8px;
 }
 
+.abr-card__actions .components-button {
+	flex-shrink: 0;
+}
+
+.abr-card__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.abr-card__note {
+	flex-basis: 100%;
+}
+
 .abr-diff {
-	margin: 0 0 10px;
-	padding: 8px 12px;
-	background: #f6f7f7;
-	border-radius: 2px;
+	margin: 0 0 8px;
 	line-height: 1.7;
 }
 
-.abr-diff del,
-.abr-diff ins {
-	padding: 1px 2px;
-	border-radius: 2px;
+.abr-settings {
+	margin: 0 0 8px;
+	padding-left: 20px;
+	list-style: disc;
 }
 
-.abr-diff del + ins {
-	margin-left: 3px;
+.abr-inner__list {
+	margin: 0;
+	padding: 0;
 }
 
-.abr-diff del {
-	background: #fcf0f1;
-	color: #8a2424;
-	text-decoration: line-through;
+.abr-inner__item {
+	list-style: none;
+	margin: 0 0 16px;
 }
 
-.abr-diff ins {
-	background: #edfaef;
-	color: #00450c;
-	text-decoration: none;
-}
-
-.abr-modal mark {
-	background: #fcf9e8;
-	box-shadow: 0 0 0 1px #dba617;
-	color: inherit;
-}
-
-.abr-badge {
-	font-size: 11px;
-	line-height: 1;
-	padding: 4px 6px;
-	border-radius: 2px;
-	background: #f0f0f0;
-	color: #1e1e1e;
-}
-
-.abr-badge--missing {
-	background: #fcf0f1;
-	color: #8a2424;
-}
-
-.abr-badge--changed {
-	background: #fcf9e8;
-	color: #614200;
-}
-
-.abr-badge--match {
-	background: #edfaef;
-	color: #00450c;
+.abr-loading {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 /* Search results */
 .abr-results {
 	margin: 0;
-	padding-bottom: 24px;
+	padding: 0 0 24px;
 	max-height: 66vh;
 	overflow-y: auto;
 }
 
 .abr-result {
-	border: 1px solid #e0e0e0;
-	border-radius: 4px;
-	padding: 10px 16px;
-	margin: 0 0 10px;
 	list-style: none;
+	margin: 0 0 12px;
 }
 
-.abr-result__text {
-	margin: 0 0 4px;
-}
-
+.abr-result__text,
 .abr-result__meta {
 	margin: 0 0 8px;
-	color: #757575;
-	font-size: 12px;
-}
-
-.abr-search-empty {
-	color: #757575;
 }
 
 @media (max-width: 600px) {
@@ -217,8 +150,6 @@
 	}
 
 	.abr-revisions {
-		border-right: 0;
-		border-bottom: 1px solid #e0e0e0;
 		padding: 0 0 12px;
 		max-height: 30vh;
 	}
