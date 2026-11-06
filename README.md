@@ -29,7 +29,7 @@ WordPress revisions are all or nothing. If someone deleted a paragraph last week
 > [!NOTE]
 > Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
 >
-> Part of Axle by AryanX, a family of plugins for running WordPress sites safely.
+> Part of [Axle](https://axlewp.com/) by AryanX, a family of free plugins for running WordPress sites safely.
 
 ## Features
 
@@ -40,6 +40,10 @@ WordPress revisions are all or nothing. If someone deleted a paragraph last week
 - **Find text in old revisions** searches every revision and jumps to the block that had it
 - Revision authors, difference counts, autosaves labelled, arrow-key navigation
 - Any block, including blocks from other plugins and blocks inside groups and columns
+- **Restore content only** and **Restore styling only** for one block, with the changes preview following the choice
+- Groups and columns come back with everything inside, in one undo step. The list counts what differs inside, and can restore one inner block
+- Works in the Site Editor on templates, template parts and synced patterns
+- Command palette: Restore blocks from a revision, Restore selected block from a revision, Find text in old revisions
 - Ctrl+Z undoes a restore, and nothing is saved until you update the post
 
 ## Install
@@ -70,6 +74,10 @@ There is no build step and nothing is stored: revisions are read through the RES
   </tr>
   <tr>
     <td width="50%" valign="top"><img src=".wordpress-org/screenshot-3.png" alt="Finding deleted text across revisions"><br><sub>Finding deleted text across revisions</sub></td>
+    <td width="50%" valign="top"><img src=".wordpress-org/screenshot-4.png" alt="Restoring a block of a template part in the Site Editor"><br><sub>Restoring a block of a template part in the Site Editor</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src=".wordpress-org/screenshot-5.png" alt="Restoring a group, with what differs inside it"><br><sub>Restoring a group, with what differs inside it</sub></td>
   </tr>
 </table>
 
