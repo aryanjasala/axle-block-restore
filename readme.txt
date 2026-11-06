@@ -16,6 +16,8 @@ WordPress revisions are all or nothing. If someone deleted a paragraph last week
 
 Axle Block Restore works inside the block editor and restores single blocks, with all their settings.
 
+Part of [Axle](https://axlewp.com/) by AryanX, a family of free plugins for running WordPress sites safely.
+
 **Restore one block to an earlier version**
 
 1. Select the block and open its menu (⋮).
@@ -34,6 +36,18 @@ Axle Block Restore works inside the block editor and restores single blocks, wit
 
 Can't remember which revision had the sentence you need? Type a few words into "Find text in old revisions". Every block that contained them is listed, with how many revisions it appears in. Click one to jump to it.
 
+**Restore only the content, or only the styling**
+
+With one block selected, each older version also has **Restore content only** (the words, links and inner blocks, keeping the block's current colours, fonts, spacing and layout) and **Restore styling only** (the old look, keeping what the block says now). An option that would change nothing is greyed out, and "Show changes" shows what the option you pick would change.
+
+**Restore a whole group in one step**
+
+A group, columns or any block with inner blocks comes back with everything inside it, and one Ctrl+Z undoes it. When the group still exists, the list shows what differs inside it (blocks added, removed and changed) and lets you restore one inner block without touching the rest.
+
+**In the Site Editor and the command palette**
+
+Templates, template parts and synced patterns have revisions too, and the same two menu entries work on them. A block inside a template part restores from the part's own revisions. The command palette (Ctrl+K, ⌘K) has "Restore blocks from a revision", "Restore selected block from a revision" and "Find text in old revisions".
+
 Every restore is a normal edit: press Ctrl+Z (⌘Z on a Mac) to undo it, and nothing is saved until you update the post.
 
 * "Show changes" highlights the words that differ between the block now and its old version.
@@ -46,11 +60,7 @@ No settings and nothing stored in the database.
 
 Free and open source under the GPL. No pro version, no upsells, no ads in wp-admin, no tracking. And it stays that way.
 
-Part of Axle by AryanX, a family of plugins for running WordPress sites safely.
-
 **Try it before you install.** [try.axlewp.com/axle-block-restore](https://try.axlewp.com/axle-block-restore) opens a private WordPress in your browser with this plugin and some demo content.
-
-Part of [Axle](https://axlewp.com/), a family of free plugins for running WordPress sites safely.
 
 == Frequently Asked Questions ==
 
@@ -64,13 +74,19 @@ It appears in the block editor for post types that keep revisions, such as posts
 
 = Does it work in the Site Editor? =
 
-Not yet. Templates have revisions too, and support is planned.
+Yes, for templates, template parts and synced patterns. A template or template part that still comes from the theme's files has no revisions until you save it once. In a template, WordPress locks the blocks of a template part to content editing, so their block menu has no restore item: choose **Edit original** on the part, or use the command palette.
+
+= What counts as content, and what as styling? =
+
+Attributes with `role: content` in a block's `block.json`, and text read from the block's markup, are content. The listed style attributes (`style`, `className`, `align`, `layout`, colours, font size and family, gradient, border colour) and any other setting count as styling. Developers can change this with the `axleBlockRestore.attributeRole` filter, described in the reference.
 
 == Screenshots ==
 
 1. Restoring a deleted paragraph from a revision.
 2. Picking an earlier version of one block, with its changes highlighted.
 3. Finding deleted text across revisions.
+4. Restoring a block of a template part in the Site Editor.
+5. Restoring a group, with what differs inside it.
 
 == Changelog ==
 
