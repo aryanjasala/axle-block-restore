@@ -15,7 +15,7 @@ use const AryanX\Axle\BlockRestore\VERSION;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Loads the three editor scripts on post editing screens.
+ * Loads the three editor scripts in the post editor and the Site Editor.
  *
  * The matching script has no WordPress dependencies (it is unit tested in
  * Node), the components script builds the restore window on top of it, and
@@ -31,17 +31,34 @@ final class Assets implements Service {
 	}
 
 	/**
-	 * Enqueues the scripts in the post editor, for post types with revisions.
+	 * Enqueues the scripts in the post editor for post types with revisions, and in the Site Editor.
+	 *
+	 * The Site Editor edits many things, so the script gets the list of post
+	 * types it may offer restores for and checks the one being edited.
 	 */
 	public function enqueue(): void {
 		$screen = get_current_screen();
-		if ( ! $screen || 'post' !== $screen->base || ! in_array( $screen->post_type, Plugin::post_types(), true ) ) {
+		if ( ! $screen ) {
+			return;
+		}
+
+		$post_types = Plugin::editable_post_types();
+		if ( 'post' === $screen->base ) {
+			// The post editor keeps following `axle_block_restore_post_types`; the Site Editor types have their own filter.
+			if ( ! in_array( $screen->post_type, $post_types, true ) || ! in_array( $screen->post_type, Plugin::post_types(), true ) ) {
+				return;
+			}
+		} elseif ( 'site-editor' !== $screen->base || ! $post_types ) {
 			return;
 		}
 
 		$url = plugins_url( 'assets/', PLUGIN_FILE );
 
 		wp_register_script( 'axle-block-restore-matching', $url . 'js/matching.js', array(), VERSION, true );
+		wp_add_inline_script(
+			'axle-block-restore-matching',
+			'window.axleBlockRestore.config = ' . wp_json_encode( array( 'postTypes' => $post_types ) ) . ';'
+		);
 		wp_register_script(
 			'axle-block-restore-components',
 			$url . 'js/components.js',
@@ -64,7 +81,13 @@ final class Assets implements Service {
 			VERSION,
 			true
 		);
-		wp_enqueue_script( 'axle-block-restore', $url . 'js/index.js', array( 'axle-block-restore-components', 'wp-data', 'wp-hooks', 'wp-plugins' ), VERSION, true );
+
+		$index_dependencies = array( 'axle-block-restore-components', 'wp-data', 'wp-hooks', 'wp-plugins' );
+		// The command palette arrived in WordPress 6.3. Without it the menu entries still work.
+		if ( wp_script_is( 'wp-commands', 'registered' ) ) {
+			$index_dependencies[] = 'wp-commands';
+		}
+		wp_enqueue_script( 'axle-block-restore', $url . 'js/index.js', $index_dependencies, VERSION, true );
 
 		wp_set_script_translations( 'axle-block-restore-components', 'axle-block-restore' );
 		wp_set_script_translations( 'axle-block-restore', 'axle-block-restore' );

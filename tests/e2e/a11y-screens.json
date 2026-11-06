@@ -14,7 +14,8 @@
       "steps": [
         { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
         { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
-        { "waitFor": ".abr-modal .abr-card" }
+        { "waitFor": ".abr-modal .abr-card" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
       ],
       "cleanup": [["post", "delete", "{post}", "--force"]]
     },
@@ -30,7 +31,8 @@
         { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
         { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
         { "fill": "role=searchbox[name=/Find text in old revisions/i]", "value": "starter back" },
-        { "waitFor": ".abr-result" }
+        { "waitFor": ".abr-result" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
       ],
       "cleanup": [["post", "delete", "{post}", "--force"]]
     },
@@ -47,9 +49,87 @@
         { "click": "role=toolbar[name=/Block tools/i] >> role=button[name=/Options/i]" },
         { "click": "role=menuitem[name=/Restore from a revision…/i]" },
         { "click": ".abr-card >> role=button[name=/Show changes/i]" },
-        { "waitFor": ".abr-diff" }
+        { "waitFor": ".abr-diff" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
       ],
       "cleanup": [["post", "delete", "{post}", "--force"]]
+    },
+    {
+      "name": "Restore one block, with the styling changes and the restore options shown",
+      "setup": [
+        { "wp": ["post", "create", "--post_title=Sourdough basics", "--post_status=publish", "--porcelain"], "save": "post" },
+        ["post", "update", "{post}", "--post_content=<!-- wp:paragraph {\"fontSize\":\"large\"} --><p class=\"has-large-font-size\">Mix flour, sugar and eggs, then rest the dough overnight.</p><!-- /wp:paragraph -->"],
+        ["post", "update", "{post}", "--post_content=<!-- wp:paragraph {\"fontSize\":\"small\"} --><p class=\"has-small-font-size\">Mix flour, sugar and eggs, then rest the dough overnight.</p><!-- /wp:paragraph -->"]
+      ],
+      "editor": "{post}",
+      "steps": [
+        { "evaluate": "window.wp.data.dispatch( 'core/block-editor' ).selectBlock( window.wp.data.select( 'core/block-editor' ).getBlocks()[ 0 ].clientId )" },
+        { "click": "role=toolbar[name=/Block tools/i] >> role=button[name=/Options/i]" },
+        { "click": "role=menuitem[name=/Restore from a revision…/i]" },
+        { "click": ".abr-card >> role=button[name=/Show changes/i]" },
+        { "waitFor": ".abr-settings" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
+      ],
+      "cleanup": [
+        ["post", "delete", "{post}", "--force"]
+      ]
+    },
+    {
+      "name": "Restore blocks from a revision, with the changes inside a group opened",
+      "setup": [
+        { "wp": ["post", "create", "--post_title=Sourdough basics", "--post_status=publish", "--porcelain"], "save": "post" },
+        ["post", "update", "{post}", "--post_content=<!-- wp:group --><div class=\"wp-block-group\"><!-- wp:paragraph --><p>Preheat the oven.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Bake for 40 minutes.</p><!-- /wp:paragraph --></div><!-- /wp:group -->"],
+        ["post", "update", "{post}", "--post_content=<!-- wp:group --><div class=\"wp-block-group\"><!-- wp:paragraph --><p>Preheat the oven.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Bake for 30 minutes.</p><!-- /wp:paragraph --></div><!-- /wp:group -->"]
+      ],
+      "editor": "{post}",
+      "steps": [
+        { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
+        { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
+        { "click": ".abr-card >> role=button[name=/Inside:/i]" },
+        { "waitFor": ".abr-inner__item" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
+      ],
+      "cleanup": [
+        ["post", "delete", "{post}", "--force"]
+      ]
+    },
+    {
+      "name": "Restore blocks from a revision, in the Site Editor on a template part",
+      "setup": [
+        ["eval", "foreach ( get_posts( array( 'post_type' => array( 'wp_template', 'wp_template_part' ), 'post_status' => 'any', 'numberposts' => -1 ) ) as $post ) { wp_delete_post( $post->ID, true ); }"],
+        { "js": "a11y-seed.js", "call": "seedTemplatePart", "args": ["@rest", "{theme}"] }
+      ],
+      "url": "/wp-admin/site-editor.php?postType=wp_template_part&postId={theme}//header&canvas=edit",
+      "steps": [
+        { "waitFor": ".edit-site-layout" },
+        { "evaluate": "window.wp.data.dispatch( 'core/preferences' ).set( 'core/edit-site', 'welcomeGuide', false ); window.wp.data.dispatch( 'core/preferences' ).set( 'core/edit-site', 'welcomeGuideTemplate', false ); window.wp.data.dispatch( 'core/preferences' ).set( 'core', 'welcomeGuide', false );" },
+        { "press": "Escape" },
+        { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
+        { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
+        { "waitFor": ".abr-modal .abr-card" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
+      ],
+      "cleanup": [
+        ["eval", "foreach ( get_posts( array( 'post_type' => array( 'wp_template', 'wp_template_part' ), 'post_status' => 'any', 'numberposts' => -1 ) ) as $post ) { wp_delete_post( $post->ID, true ); }"]
+      ]
+    },
+    {
+      "name": "Restore blocks from a revision, on a template that has no revisions yet",
+      "setup": [
+        ["eval", "foreach ( get_posts( array( 'post_type' => array( 'wp_template', 'wp_template_part' ), 'post_status' => 'any', 'numberposts' => -1 ) ) as $post ) { wp_delete_post( $post->ID, true ); }"]
+      ],
+      "url": "/wp-admin/site-editor.php?postType=wp_template&postId={theme}//single&canvas=edit",
+      "steps": [
+        { "waitFor": ".edit-site-layout" },
+        { "evaluate": "window.wp.data.dispatch( 'core/preferences' ).set( 'core/edit-site', 'welcomeGuide', false ); window.wp.data.dispatch( 'core/preferences' ).set( 'core/edit-site', 'welcomeGuideTemplate', false ); window.wp.data.dispatch( 'core/preferences' ).set( 'core', 'welcomeGuide', false );" },
+        { "press": "Escape" },
+        { "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]" },
+        { "click": "role=menuitem[name=/Restore blocks from a revision/i]" },
+        { "waitFor": ".abr-modal .components-notice" },
+        { "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )" }
+      ],
+      "cleanup": [
+      ]
     }
   ],
   "skip": {}
