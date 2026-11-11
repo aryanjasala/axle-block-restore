@@ -99,6 +99,20 @@ test.describe( 'Axle Block Restore in the Site Editor', () => {
 		expect( await textsOf( page ) ).toEqual( [ 'Header note: open from eleven.', 'Header line two.' ] );
 	} );
 
+	test( 'lists blocks removed from a template part and puts one back from the command palette', async ( { page, rest } ) => {
+		await saveVersions( rest, `/wp/v2/template-parts/${ THEME }//header`, { slug: 'header', theme: THEME } );
+		await openSiteEditor( page, 'wp_template_part', `${ THEME }//header` );
+
+		await runCommand( page, 'Show removed blocks' );
+		const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+		await expect( modal.getByRole( 'tab', { name: 'Removed blocks', selected: true } ) ).toBeVisible();
+		const card = modal.locator( '.abr-card', { hasText: 'Header line two.' } );
+		await expect( card ).toHaveCount( 1 );
+		await card.getByRole( 'button', { name: 'Put it back where it was' } ).click();
+		await expect( modal ).toHaveCount( 0 );
+		expect( await textsOf( page ) ).toEqual( [ 'Header note: open from eleven.', 'Header line two.' ] );
+	} );
+
 	test( 'a block inside a template part, opened from a template, restores from the part\'s own revisions', async ( { page, rest } ) => {
 		await saveVersions( rest, `/wp/v2/template-parts/${ THEME }//header`, { slug: 'header', theme: THEME } );
 		await openSiteEditor( page, 'wp_template', `${ THEME }//index` );

@@ -113,6 +113,15 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 	}
 }
 
+if ( ! class_exists( 'WP_REST_Server' ) ) {
+	/**
+	 * The method constant routes are registered with.
+	 */
+	class WP_REST_Server {
+		const READABLE = 'GET';
+	}
+}
+
 if ( ! class_exists( 'WP_REST_Response' ) ) {
 	/**
 	 * Enough of WP_REST_Response for code that reads and changes its data.

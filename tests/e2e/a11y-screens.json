@@ -130,6 +130,252 @@
       ],
       "cleanup": [
       ]
+    },
+    {
+      "name": "Restore blocks from a revision, removed blocks listed",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Sourdough basics",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water.</p><!-- /wp:paragraph -->\n\n<!-- wp:paragraph --><p>Tip: keep a spoon of starter back before you bake.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water that has been fed for a week.</p><!-- /wp:paragraph -->"
+        ]
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Restore blocks from a revision/i]"
+        },
+        {
+          "click": "role=tab[name=/Removed blocks/i]"
+        },
+        {
+          "waitFor": ".abr-modal .abr-card"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ]
+      ]
+    },
+    {
+      "name": "Restore blocks from a revision, nothing removed",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Sourdough basics",
+            "--post_status=publish",
+            "--post_content=<!-- wp:paragraph --><p>Only one paragraph.</p><!-- /wp:paragraph -->",
+            "--porcelain"
+          ],
+          "save": "post"
+        }
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Restore blocks from a revision/i]"
+        },
+        {
+          "click": "role=tab[name=/Removed blocks/i]"
+        },
+        {
+          "waitFor": ".abr-modal .components-notice"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ]
+      ]
+    },
+    {
+      "name": "Restore blocks from a revision, searching other posts",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Sourdough basics",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water.</p><!-- /wp:paragraph -->\n\n<!-- wp:paragraph --><p>Tip: keep a spoon of starter back before you bake.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water that has been fed for a week.</p><!-- /wp:paragraph -->"
+        ],
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Sourdough notes",
+            "--post_status=publish",
+            "--post_content=<!-- wp:paragraph --><p>Notes.</p><!-- /wp:paragraph -->",
+            "--porcelain"
+          ],
+          "save": "other"
+        }
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Restore blocks from a revision/i]"
+        },
+        {
+          "click": "role=tab[name=/Another post/i]"
+        },
+        {
+          "fill": "role=searchbox[name=/Search posts and pages/i]",
+          "value": "Sourdough"
+        },
+        {
+          "waitFor": ".abr-modal .abr-result"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ],
+        [
+          "post",
+          "delete",
+          "{other}",
+          "--force"
+        ]
+      ]
+    },
+    {
+      "name": "Restore blocks from a revision, copying a block from another post",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Sourdough basics",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water.</p><!-- /wp:paragraph -->\n\n<!-- wp:paragraph --><p>Tip: keep a spoon of starter back before you bake.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water that has been fed for a week.</p><!-- /wp:paragraph -->"
+        ],
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Pantry notes",
+            "--post_status=publish",
+            "--post_content=<!-- wp:paragraph --><p>Keep flour in a dry place.</p><!-- /wp:paragraph -->",
+            "--porcelain"
+          ],
+          "save": "other"
+        }
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Restore blocks from a revision/i]"
+        },
+        {
+          "click": "role=tab[name=/Another post/i]"
+        },
+        {
+          "fill": "role=searchbox[name=/Search posts and pages/i]",
+          "value": "Pantry"
+        },
+        {
+          "click": ".abr-modal .abr-result >> role=button[name=/Choose this post/i]"
+        },
+        {
+          "waitFor": ".abr-modal .abr-card"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ],
+        [
+          "post",
+          "delete",
+          "{other}",
+          "--force"
+        ]
+      ]
     }
   ],
   "skip": {}

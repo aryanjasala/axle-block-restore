@@ -15,6 +15,22 @@
 	min-height: 360px;
 }
 
+/* Views */
+.abr-tabs > .components-tab-panel__tabs {
+	margin-bottom: 16px;
+}
+
+.abr-tabs .components-tab-panel__tab-content > * + * {
+	margin-top: 12px;
+}
+
+.abr-source {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+}
+
 /* Revision list */
 .abr-revisions {
 	display: flex;

@@ -8,6 +8,7 @@
 namespace AryanX\Axle\BlockRestore\Editor;
 
 use AryanX\Axle\BlockRestore\Plugin;
+use AryanX\Axle\BlockRestore\Rest\PostSearch;
 use AryanX\Axle\BlockRestore\Service;
 use const AryanX\Axle\BlockRestore\PLUGIN_FILE;
 use const AryanX\Axle\BlockRestore\VERSION;
@@ -55,10 +56,11 @@ final class Assets implements Service {
 		$url = plugins_url( 'assets/', PLUGIN_FILE );
 
 		wp_register_script( 'axle-block-restore-matching', $url . 'js/matching.js', array(), VERSION, true );
-		wp_add_inline_script(
-			'axle-block-restore-matching',
-			'window.axleBlockRestore.config = ' . wp_json_encode( array( 'postTypes' => $post_types ) ) . ';'
+		$config = array(
+			'postTypes'     => $post_types,
+			'copyPostTypes' => PostSearch::source_post_types(),
 		);
+		wp_add_inline_script( 'axle-block-restore-matching', 'window.axleBlockRestore.config = ' . wp_json_encode( $config ) . ';' );
 		wp_register_script(
 			'axle-block-restore-components',
 			$url . 'js/components.js',
