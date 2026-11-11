@@ -36,6 +36,14 @@ Part of [Axle](https://axlewp.com/) by AryanX, a family of free plugins for runn
 
 Can't remember which revision had the sentence you need? Type a few words into "Find text in old revisions". Every block that contained them is listed, with how many revisions it appears in. Click one to jump to it.
 
+**See what was removed recently**
+
+Open the editor menu, choose **Restore blocks from a revision**, then the **Removed blocks** tab (or run "Show removed blocks" from the command palette). It lists every block, top level or nested, that was in the newest 20 revisions and is gone now, newest removal first, with who saved the last revision that had it, when, and a preview. **Put it back where it was** returns it next to its old neighbours (or inside its old group), and **Insert below the selected block** or **Insert at the end** put it elsewhere. A block that stayed gone for many revisions is listed once, and one that was only edited is not listed.
+
+**Copy a block from another post**
+
+The **Another post** tab searches the posts and pages you can edit. Pick one, choose its current version or one of its revisions, and insert any of its blocks below the selected block or at the end. Only posts you can edit are offered, and the server checks that as well.
+
 **Restore only the content, or only the styling**
 
 With one block selected, each older version also has **Restore content only** (the words, links and inner blocks, keeping the block's current colours, fonts, spacing and layout) and **Restore styling only** (the old look, keeping what the block says now). An option that would change nothing is greyed out, and "Show changes" shows what the option you pick would change.
@@ -46,7 +54,7 @@ A group, columns or any block with inner blocks comes back with everything insid
 
 **In the Site Editor and the command palette**
 
-Templates, template parts and synced patterns have revisions too, and the same two menu entries work on them. A block inside a template part restores from the part's own revisions. The command palette (Ctrl+K, ⌘K) has "Restore blocks from a revision", "Restore selected block from a revision" and "Find text in old revisions".
+Templates, template parts and synced patterns have revisions too, and the same two menu entries work on them. A block inside a template part restores from the part's own revisions. The command palette (Ctrl+K, ⌘K) has "Restore blocks from a revision", "Restore selected block from a revision", "Find text in old revisions" and "Show removed blocks".
 
 Every restore is a normal edit: press Ctrl+Z (⌘Z on a Mac) to undo it, and nothing is saved until you update the post.
 
@@ -75,6 +83,14 @@ It appears in the block editor for post types that keep revisions, such as posts
 = Does it work in the Site Editor? =
 
 Yes, for templates, template parts and synced patterns. A template or template part that still comes from the theme's files has no revisions until you save it once. In a template, WordPress locks the blocks of a template part to content editing, so their block menu has no restore item: choose **Edit original** on the part, or use the command palette.
+
+= How far back does the removed blocks list look? =
+
+At the newest 20 revisions. Developers can change that with the `axleBlockRestore.removedRevisions` filter. A block you only edited is not "removed": it has to have no block of the same type with similar words left in the post. A rewritten block is listed with the label **Rewritten since**.
+
+= Who can copy blocks from another post? =
+
+Only posts the person can edit are searched and listed, and the server checks permission on every post, so titles of other people's posts never reach someone who cannot edit them. Turn the feature off, or limit the post types, with the `axle_block_restore_copy_post_types` filter.
 
 = What counts as content, and what as styling? =
 
