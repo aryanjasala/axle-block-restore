@@ -4,7 +4,7 @@ Tags: revisions, block editor, undo, restore, blocks
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.0
+Stable tag: 3.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -105,6 +105,10 @@ Attributes with `role: content` in a block's `block.json`, and text read from th
 5. Restoring a group, with what differs inside it.
 
 == Changelog ==
+
+= 3.1.0 =
+* New: show recently removed blocks and copy blocks from another post
+* New: restore blocks in the Site Editor, from the command palette, and by content or styling
 
 = 3.0.0 =
 * Changed (breaking change): rename to Axle Block Restore for WordPress.org
