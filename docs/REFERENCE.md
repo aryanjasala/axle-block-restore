@@ -17,7 +17,7 @@ There is no build step. The scripts use the `wp.*` globals WordPress already loa
 
 | Script | Job |
 | --- | --- |
-| `assets/js/matching.js` | Block text, similarity ranking, classification, word diff, revision search, attribute roles, partial restores and the inner block comparison. No WordPress dependency, so it is unit tested in Node |
+| `assets/js/matching.js` | Block text, similarity ranking, classification, word diff, revision search, attribute roles, partial restores, the inner block comparison, and the removed blocks list with the position a block goes back to. No WordPress dependency, so it is unit tested in Node |
 | `assets/js/components.js` | The restore window, built on `wp.components` and `wp.blockEditor`, and the lookup of which entity a block belongs to |
 | `assets/js/index.js` | The two menu entries (`BlockSettingsMenuControls` and `PluginMoreMenuItem`) and the command palette entries |
 
@@ -72,15 +72,45 @@ Template parts are not compared, because their blocks belong to the part's own d
 
 ## Command palette
 
-On WordPress 6.3 and later the command palette (Ctrl+K, ⌘K) has three entries, in the post editor and the Site Editor:
+On WordPress 6.3 and later the command palette (Ctrl+K, ⌘K) has four entries, in the post editor and the Site Editor:
 
 | Command | Does |
 | --- | --- |
 | Restore blocks from a revision | Opens the window for the whole post, template, part or pattern |
 | Restore selected block from a revision | Opens it for the selected block. Only listed while one block is selected |
 | Find text in old revisions | Opens the window with the search box focused |
+| Show removed blocks | Opens the window on the **Removed blocks** view |
 
 Without `wp-commands` the script still loads and the menu entries work.
+
+## Removed blocks
+
+The window has three views, as tabs: **By revision** (the list above), **Removed blocks** and **Another post**. **Removed blocks** answers "what did we lose recently". It looks through the newest 20 revisions (`axleBlockRestore.removedRevisions`) and lists every block, top level or nested, that was in one of them and is not in the post now, newest removal first.
+
+A block counts as removed when no block now has the same markup, no block of the same type now has at least 60% of its words in common (`axleBlockRestore.removedSimilarity`; that is an edit), and it holds no block that is still in the post. Then:
+
+- A block that was gone for several revisions, or was edited before it went, is listed once, as its newest version, with "Also in 2 older revisions".
+- A block inside a removed block is not listed on its own: restoring the outer block brings it back.
+- A block of the same type that now sits at its old place is labelled **Rewritten since** instead of **Removed**.
+- Empty paragraphs, headings and lists are left out.
+
+Each card shows the block type, an excerpt, who saved the last revision that had it and when, and **Preview**. The actions:
+
+| Action | Puts the block |
+| --- | --- |
+| **Put it back where it was** | After the nearest earlier neighbour that is still in the post, else before the nearest later one, else at its old index limited to the list. A nested block goes back into the counterpart of its old parent (same type at the same path, else the most similar block of that type), and to the top level when that parent is gone |
+| **Insert below the selected block** | Below the block that is selected in the editor. Only shown while a block of what you are editing is selected |
+| **Insert at the end** | At the end of the post, template or template part |
+
+Each is one editor change: one Ctrl+Z undoes it. The view says when it is loading, when the revisions could not load (with **Try again**), and when nothing was removed. It works in the post editor and in the Site Editor.
+
+## Copying a block from another post
+
+**Another post** searches the posts and pages you can edit, by title or text, and leaves out the post you are editing. Pick one, choose **Current version** or one of its revisions, optionally filter its blocks by text, then **Insert below the selected block** or **Insert at the end** on any block, nested ones included. The block is copied, so the other post does not change. It is one editor change, like every restore.
+
+Only posts you can edit are offered, and the server checks it, not just the screen. The search is `GET /axle-block-restore/v1/posts?search=&post_type=&exclude_id=&per_page=`. It asks `current_user_can( 'edit_post' )` for every post it finds and returns titles, types, status and dates only, never content, so it does not list titles of other people's published posts or drafts that you cannot edit (core's own search does list published ones). Reading a post's revisions or its content then goes through core's endpoints, which check `edit_post` again.
+
+`axle_block_restore_copy_post_types` limits the post types, and an empty list turns the view off for everyone: the route then answers 403.
 
 ## The states of the window
 
@@ -94,6 +124,8 @@ Each revision and block carries a tone and a word. The tones are core's `Badge` 
 | Best match | info | The closest version of the selected block |
 | Found by your search | info | The block you picked in the search results |
 | Added, Removed, Changed | good, error, warning | Inside a group, what restoring the whole group would do |
+| Removed | error | In the Removed blocks view: in a recent revision, not in the post now |
+| Rewritten since | warning | In the Removed blocks view: a block of the same type is at its old place now |
 
 Loading shows a spinner with "Loading revisions…". A revision list that cannot load shows an error with **Try again**. A post without revisions, and a template that still comes from the theme, show a note that says why the list is empty.
 
@@ -106,6 +138,8 @@ PHP:
 | `axle_block_restore_post_types` | filter | `( string[] $post_types )`. Post types that get Axle Block Restore in the post editor and the abilities. Default every REST-enabled post type with revisions and the editor. Types without revisions are dropped |
 | `axle_block_restore_site_editor_post_types` | filter | `( string[] $post_types )`. Post types that get it in the Site Editor. Default `wp_template`, `wp_template_part` and `wp_block`. Types that do not exist, have no revisions or are not in the REST API are dropped |
 | `axle_block_restore_capability` | filter | `( string $capability, string $post_type )`. Capability a user needs before the scripts load for a post type. Default the type's own `edit_posts` capability: `edit_theme_options` for templates and parts, `edit_posts` for patterns and posts. An empty value falls back to the default |
+| `axle_block_restore_copy_post_types` | filter | `( string[] $post_types )`. Post types the **Another post** view copies from, and the search route allows. Default every post type the user can edit that has Axle Block Restore. Types the user cannot edit are dropped. An empty array turns the view off and makes the route answer 403 |
+| `axle_block_restore_copy_max_results` | filter | `( int $max )`. Most posts one search returns. Default 20 |
 
 JavaScript, through `wp.hooks`:
 
@@ -113,12 +147,16 @@ JavaScript, through `wp.hooks`:
 | --- | --- | --- |
 | `axleBlockRestore.canRestore` | filter | `( boolean canRestore, Object block )`. Whether a block's menu and the "Restore selected block" command are offered for a block |
 | `axleBlockRestore.revisionsPerPage` | filter | `( number perPage )`. Revisions loaded at a time, 1 to 100. Default 50 |
+| `axleBlockRestore.removedRevisions` | filter | `( number count )`. How many of the newest revisions the Removed blocks view looks through, 1 to 100. Default 20 |
+| `axleBlockRestore.removedSimilarity` | filter | `( number similarity )`. Share of words, 0 to 1, a block of the same type now must have in common with an old block for it to count as edited, not removed. Default 0.6. 1 lists every block that is not identical |
+| `axleBlockRestore.removedBlocks` | filter | `( Object[] entries, { revisionIds } )`. The blocks listed as removed, newest removal first. Each has `name`, `title`, `text`, `path`, `block`, `revisionId`, `revisionIds` and `rewritten` |
+| `axleBlockRestore.copyPostTypes` | filter | `( string[] postTypes )`. Post types the Another post view offers. Can only narrow the PHP list. An empty array hides the view |
 | `axleBlockRestore.attributeRole` | filter | `( string role, string name, string blockName, Object schema )`. Whether an attribute is `content`, `style` or `keep` for a partial restore. Default from `block.json` `role`, the attribute's source and the style list. Any other return value is ignored |
 | `axleBlockRestore.styleAttributes` | filter | `( string[] names, string blockName )`. Attribute names that count as style. Default `style`, `className`, `align`, `layout`, `backgroundColor`, `textColor`, `fontSize`, `fontFamily`, `gradient`, `borderColor` |
 | `axleBlockRestore.restoreModes` | filter | `( string[] modes )`. Ways to restore one block: `replace`, `content`, `style`. Default all three. `replace` is always kept, unknown names are dropped |
 | `axleBlockRestore.commands` | filter | `( Object[] commands, string\|null blockId )`. Command palette entries, each `{ name, label, icon, callback }`. Add, change or remove entries |
-| `axleBlockRestore.opened` | action | `( { clientId, postType, postId, focusSearch } )`. The window opened. `clientId` is null for the whole post, template, part or pattern. Template and part IDs look like `theme//slug` |
-| `axleBlockRestore.restored` | action | `( { mode, block, revisionId, postId, postType } )`. A block came back. `mode` is `replace`, `content`, `style`, `insert-after`, `replace-at`, `insert-at`, `inner-replace` or `inner-insert` |
+| `axleBlockRestore.opened` | action | `( { clientId, postType, postId, focusSearch, view } )`. The window opened. `view` is `revisions` or `removed`. `clientId` is null for the whole post, template, part or pattern. Template and part IDs look like `theme//slug` |
+| `axleBlockRestore.restored` | action | `( { mode, block, revisionId, postId, postType } )`. A block came back. `mode` is `replace`, `content`, `style`, `insert-after`, `replace-at`, `insert-at`, `inner-replace`, `inner-insert`, `removed-place`, `removed-end`, `removed-below`, `other-post-below` or `other-post-end`. For the last two the details also have `sourcePostId` and `sourcePostType`, and `revisionId` is a revision of that post or `current` |
 
 ```js
 // No restoring for reusable blocks, and log every restore.
@@ -170,7 +208,7 @@ Revisions are fetched 50 at a time from `/wp/v2/<rest base>/<id>/revisions` with
 
 Template and template part revisions come from core's templates controller, so each one has `id` set to the template's ID (`theme//slug`), its own ID in `wp_id`, and its time in `modified`, in the site's time zone. The window reads those.
 
-The plugin adds one read-only field to revision responses:
+The plugin adds one read-only route, `/axle-block-restore/v1/posts` (see Copying a block from another post), and one read-only field to revision responses:
 
 | Field | Value |
 | --- | --- |

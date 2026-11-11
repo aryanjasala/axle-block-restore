@@ -8,6 +8,7 @@
 namespace AryanX\Axle\BlockRestore;
 
 use AryanX\Axle\BlockRestore\Editor\Assets;
+use AryanX\Axle\BlockRestore\Rest\PostSearch;
 use AryanX\Axle\BlockRestore\Rest\RevisionAuthor;
 use AryanX\Axle\BlockRestore\Rest\RevisionContent;
 
@@ -32,7 +33,7 @@ final class Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 
-			$services = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new Abilities() );
+			$services = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new PostSearch(), new Abilities() );
 			foreach ( $services as $service ) {
 				$service->register();
 			}

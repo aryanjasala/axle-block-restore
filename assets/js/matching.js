@@ -568,6 +568,220 @@
 		return results;
 	}
 
+	// Blocks that are empty by default. One with no text is noise in a list of removed blocks.
+	var EMPTY_NOISE = [ 'core/paragraph', 'core/heading', 'core/freeform', 'core/list-item', 'core/html' ];
+
+	/**
+	 * Whether a path is a strict ancestor of another.
+	 *
+	 * @param {number[]} prefix Path of the possible ancestor.
+	 * @param {number[]} path   Path of the possible descendant.
+	 * @return {boolean} True when `path` lies below `prefix`.
+	 */
+	function isAncestor( prefix, path ) {
+		return prefix.length < path.length && prefix.every( function ( step, index ) {
+			return path[ index ] === step;
+		} );
+	}
+
+	/**
+	 * Blocks that were in recent revisions and are not in the post any more.
+	 *
+	 * A block counts as removed when no block now has the same markup and no block
+	 * of the same type now has similar text, and it holds no block that is still
+	 * in the post (those are edits, not removals).
+	 * Older versions of one block (the same block, or a version of it with
+	 * similar text) are listed once, as the newest version. A block inside a
+	 * removed block is not listed on its own, because restoring the outer block
+	 * brings it back.
+	 *
+	 * @param {Array<{id: *, items: Array<{name: string, path: number[], text: string, print: string}>}>} revisions Revisions, newest first.
+	 * @param {Array<{name: string, path: number[], text: string, print: string}>}                        current   Every block in the post now.
+	 * @param {{similarity: number, emptyNoise: string[]}}                                                [options] Edit threshold (default 0.6) and block types ignored when they have no text.
+	 * @return {Array<{name: string, path: number[], text: string, print: string, revisionId: *, revisionIndex: number, revisionIds: Array<*>}>} Removed blocks, the most recently removed first.
+	 */
+	function removedBlocks( revisions, current, options ) {
+		var settings = options || {};
+		var threshold = 'number' === typeof settings.similarity ? settings.similarity : 0.6;
+		var noise = Array.isArray( settings.emptyNoise ) ? settings.emptyNoise : EMPTY_NOISE;
+		var nowPrints = new Set(
+			current.map( function ( item ) {
+				return item.print;
+			} )
+		);
+		var kept = [];
+
+		function editedNow( item ) {
+			return (
+				'' !== item.text &&
+				current.some( function ( other ) {
+					return other.name === item.name && similarity( other.text, item.text ) >= threshold;
+				} )
+			);
+		}
+
+		// A block with something of its own left in the post was edited, not removed: only what is missing inside it counts.
+		function holdsSurvivor( item, items ) {
+			return items.some( function ( other ) {
+				return isAncestor( item.path, other.path ) && ( nowPrints.has( other.print ) || ( '' !== other.text && editedNow( other ) ) );
+			} );
+		}
+
+		function sameBlockAs( entry, item ) {
+			return entry.name === item.name && ( entry.print === item.print || ( '' !== entry.text && '' !== item.text && similarity( entry.text, item.text ) >= threshold ) );
+		}
+
+		revisions.forEach( function ( revision, revisionIndex ) {
+			var covered = [];
+
+			revision.items.forEach( function ( item ) {
+				var older;
+
+				if ( nowPrints.has( item.print ) || ( '' === item.text && noise.indexOf( item.name ) !== -1 ) ) {
+					return;
+				}
+				if ( covered.some( function ( path ) {
+					return isAncestor( path, item.path );
+				} ) ) {
+					return;
+				}
+				if ( editedNow( item ) || holdsSurvivor( item, revision.items ) ) {
+					return;
+				}
+
+				covered.push( item.path );
+				older = kept.find( function ( entry ) {
+					return sameBlockAs( entry, item );
+				} );
+				if ( older ) {
+					if ( older.revisionIds.indexOf( revision.id ) === -1 ) {
+						older.revisionIds.push( revision.id );
+					}
+					return;
+				}
+
+				kept.push(
+					Object.assign( {}, item, {
+						revisionId: revision.id,
+						revisionIndex: revisionIndex,
+						revisionIds: [ revision.id ],
+						// Same type at the same place now: rewritten in place rather than deleted.
+						rewritten: current.some( function ( other ) {
+							return other.name === item.name && other.path.join( '.' ) === item.path.join( '.' );
+						} ),
+					} )
+				);
+			} );
+		} );
+
+		return kept;
+	}
+
+	/**
+	 * Blocks that share a parent, in order.
+	 *
+	 * @param {Array<{path: number[]}>} items      Flat list of blocks.
+	 * @param {number[]}                parentPath Path of the parent, empty for the top level.
+	 * @return {Array<Object>} Children of that parent.
+	 */
+	function siblingsOf( items, parentPath ) {
+		return items
+			.filter( function ( item ) {
+				return item.path.length === parentPath.length + 1 && parentPath.every( function ( step, index ) {
+					return item.path[ index ] === step;
+				} );
+			} )
+			.sort( function ( a, b ) {
+				return a.path[ a.path.length - 1 ] - b.path[ b.path.length - 1 ];
+			} );
+	}
+
+	/**
+	 * Where a removed block goes in the post now, as the nearest valid position.
+	 *
+	 * The block goes back under the block that holds the counterpart of its old
+	 * parent (same type at the same path, else the most similar block of that
+	 * type). With no such parent it goes to the top level, next to the outermost
+	 * block that held it. Inside that list it goes after the nearest earlier
+	 * neighbour that still exists, else before the nearest later one, else at
+	 * its old index limited to the list.
+	 *
+	 * @param {Array<{name: string, path: number[], text: string, print: string}>} revisionItems Every block in the revision it was last seen in.
+	 * @param {{name: string, path: number[]}}                                     entry         The removed block, with its path in that revision.
+	 * @param {Array<{name: string, path: number[], text: string, print: string}>} currentItems  Every block in the post now.
+	 * @return {{parentPath: number[], index: number, anchored: boolean, nested: boolean}} Parent path now, index below it, whether a neighbour fixed the spot, and whether the old parent was found.
+	 */
+	function placement( revisionItems, entry, currentItems ) {
+		var parentPath = entry.path.slice( 0, -1 );
+		var revisionList;
+		var currentList;
+		var anchorPath = entry.path;
+		var nested = false;
+		var position;
+		var k;
+		var found;
+
+		function samePlace( a, b ) {
+			return a.join( '.' ) === b.join( '.' );
+		}
+
+		// A neighbour counts when it is the same block, or an edited version of it.
+		function same( a, b ) {
+			return a.name === b.name && ( a.print === b.print || ( '' !== a.text && '' !== b.text && similarity( a.text, b.text ) >= 0.5 ) );
+		}
+
+		if ( parentPath.length ) {
+			var oldParent = revisionItems.find( function ( item ) {
+				return samePlace( item.path, parentPath );
+			} );
+			var counterpart = null;
+
+			if ( oldParent ) {
+				counterpart = currentItems.find( function ( item ) {
+					return item.name === oldParent.name && samePlace( item.path, parentPath );
+				} );
+				if ( ! counterpart ) {
+					counterpart = rankCandidates( currentItems, { name: oldParent.name, path: parentPath, text: oldParent.text, print: oldParent.print } ).filter( function ( item ) {
+						return similarity( item.text, oldParent.text ) >= 0.5;
+					} )[ 0 ];
+				}
+			}
+
+			if ( counterpart ) {
+				nested = true;
+				parentPath = counterpart.path;
+			} else {
+				parentPath = [];
+				anchorPath = entry.path.slice( 0, 1 );
+			}
+		}
+
+		revisionList = siblingsOf( revisionItems, nested ? entry.path.slice( 0, -1 ) : [] );
+		currentList = siblingsOf( currentItems, parentPath );
+		position = revisionList.findIndex( function ( item ) {
+			return samePlace( item.path, anchorPath );
+		} );
+
+		for ( k = position - 1; k >= 0; k-- ) {
+			found = currentList.findIndex( function ( item ) {
+				return same( item, revisionList[ k ] );
+			} );
+			if ( found !== -1 ) {
+				return { parentPath: parentPath, index: found + 1, anchored: true, nested: nested };
+			}
+		}
+		for ( k = position + 1; k < revisionList.length; k++ ) {
+			found = currentList.findIndex( function ( item ) {
+				return same( item, revisionList[ k ] );
+			} );
+			if ( found !== -1 ) {
+				return { parentPath: parentPath, index: found, anchored: true, nested: nested };
+			}
+		}
+
+		return { parentPath: parentPath, index: Math.min( anchorPath[ anchorPath.length - 1 ], currentList.length ), anchored: false, nested: nested };
+	}
+
 	/**
 	 * Shortens text around the first match of a query.
 	 *
@@ -608,5 +822,8 @@
 		diffTree: diffTree,
 		summarizeDiff: summarizeDiff,
 		blockAt: blockAt,
+		removedBlocks: removedBlocks,
+		placement: placement,
+		isAncestor: isAncestor,
 	};
 } );

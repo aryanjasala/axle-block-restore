@@ -44,7 +44,9 @@ WordPress revisions are all or nothing. If someone deleted a paragraph last week
 - **Restore content only** and **Restore styling only** for one block, with the changes preview following the choice
 - Groups and columns come back with everything inside, in one undo step. The list counts what differs inside, and can restore one inner block
 - Works in the Site Editor on templates, template parts and synced patterns
-- Command palette: Restore blocks from a revision, Restore selected block from a revision, Find text in old revisions
+- **Removed blocks** view lists blocks that were in the last 20 revisions and are gone now, newest removal first, with who saved the revision, a preview, and where to put each back
+- **Another post** view copies a block from any post or page you can edit, from its current version or one of its revisions
+- Command palette: Restore blocks from a revision, Restore selected block from a revision, Find text in old revisions, Show removed blocks
 
 ## Install
 
@@ -99,7 +101,7 @@ axle-block-restore.php     plugin header and PSR-4 autoloader
 src/
 ├── Plugin.php            registers the services, lists supported post types
 ├── Editor/Assets.php     loads the editor scripts
-└── Rest/RevisionAuthor.php  author name on revision REST responses
+└── Rest/                 author name on revisions, search of posts to copy from
 assets/
 ├── js/matching.js        matching, diff and search (no WordPress dependency)
 ├── js/components.js      the restore window
@@ -119,15 +121,14 @@ Small plugins that each fill one gap in WordPress, all free with no pro version.
 
 | | Plugin | What it does |
 | --- | --- | --- |
-| <img src="https://raw.githubusercontent.com/aryanjasala/page-template-usage/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Page Template Usage](https://github.com/aryanjasala/page-template-usage) | See which template every page uses, and fix the pages on a missing template |
+| <img src="https://raw.githubusercontent.com/aryanjasala/axle-page-template-usage/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Page Template Usage](https://github.com/aryanjasala/axle-page-template-usage) | See which template every page uses, and fix the pages on a missing template |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-staging-guard/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Staging Guard](https://github.com/aryanjasala/axle-staging-guard) | Stops staging copies from emailing real people or getting indexed |
-| <img src="https://raw.githubusercontent.com/aryanjasala/category-tag-trash/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Category & Tag Trash](https://github.com/aryanjasala/category-tag-trash) | A trash for categories, tags and custom terms, with undo and full restore |
+| <img src="https://raw.githubusercontent.com/aryanjasala/axle-category-tag-trash/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Category & Tag Trash](https://github.com/aryanjasala/axle-category-tag-trash) | A trash for categories, tags and custom terms, with undo and full restore |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-read-only-mode/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Read-Only Mode](https://github.com/aryanjasala/axle-read-only-mode) | Read-only mode for WordPress during migrations and deploys |
 | <img src="https://raw.githubusercontent.com/aryanjasala/activity-log-with-undo/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Activity Log with Undo](https://github.com/aryanjasala/activity-log-with-undo) | An activity log where every change you can reverse has an Undo button |
 | <img src="https://raw.githubusercontent.com/aryanjasala/agent-governance/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Agent Governance](https://github.com/aryanjasala/agent-governance) | Hold risky AI agent calls for approval, preview what they change, and roll back a session |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-ai-guard/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle AI Guard](https://github.com/aryanjasala/axle-ai-guard) | See and control every AI call your plugins make: cost, data sent, budgets and a kill switch |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-config-sync/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Config Sync](https://github.com/aryanjasala/axle-config-sync) | Keep settings in git, diff them against the live site, apply with a preview and undo |
-| <img src="https://raw.githubusercontent.com/aryanjasala/axle-headers/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Headers](https://github.com/aryanjasala/axle-headers) | Security headers and a Content Security Policy that learns what your site loads, then enforces it with nonces |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-leftovers/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Leftovers](https://github.com/aryanjasala/axle-leftovers) | Find what deleted plugins left behind, see who owns it and why, and clean it up with undo |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-license-tracker/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle License Tracker](https://github.com/aryanjasala/axle-license-tracker) | See which premium plugins are licensed, which lapsed and stopped getting updates, and what renews when |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-review/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Review](https://github.com/aryanjasala/axle-review) | Share drafts through private links and collect outside feedback as block Notes |

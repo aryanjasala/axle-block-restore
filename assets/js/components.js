@@ -11,11 +11,11 @@
 	const { Fragment, useState, useEffect, useMemo, useRef } = wp.element;
 	const { __, sprintf, _n } = wp.i18n;
 	const { BlockPreview } = wp.blockEditor;
-	const { Modal, Button, Spinner, Notice, ToggleControl, SearchControl, SelectControl, Card, CardHeader, CardBody, PanelBody } = wp.components;
+	const { Modal, Button, Spinner, Notice, ToggleControl, SearchControl, SelectControl, Card, CardHeader, CardBody, PanelBody, TabPanel } = wp.components;
 	const { useSelect, useDispatch } = wp.data;
 	const { parse, serialize, cloneBlock, createBlock, getBlockType } = wp.blocks;
 	const { addQueryArgs } = wp.url;
-	const { dateI18n, getSettings: getDateSettings } = wp.date;
+	const { dateI18n, getSettings: getDateSettings, humanTimeDiff } = wp.date;
 	const { applyFilters, doAction } = wp.hooks;
 
 	/**
@@ -32,7 +32,57 @@
 		 */
 		return Math.min( 100, Math.max( 1, parseInt( applyFilters( 'axleBlockRestore.revisionsPerPage', 50 ), 10 ) || 50 ) );
 	}
+
+	/**
+	 * Revisions the removed blocks view looks through. Read when the window opens.
+	 *
+	 * @return {number} Between 1 and 100.
+	 */
+	function removedRevisions() {
+		/**
+		 * Filters how many of the newest revisions the removed blocks view looks through.
+		 *
+		 * @param {number} count Default 20. Limited to 1 to 100.
+		 */
+		return Math.min( 100, Math.max( 1, parseInt( applyFilters( 'axleBlockRestore.removedRevisions', 20 ), 10 ) || 20 ) );
+	}
+
+	/**
+	 * How alike two blocks of one type must be for the newer to count as an edit of the older, not a removal.
+	 *
+	 * @return {number} Between 0 and 1.
+	 */
+	function removedSimilarity() {
+		/**
+		 * Filters how similar the text of a block now must be to an old block for that old block to count as edited, not removed.
+		 *
+		 * @param {number} similarity Default 0.6, the share of words the two have in common. 1 means only an identical block hides a removal.
+		 */
+		const value = parseFloat( applyFilters( 'axleBlockRestore.removedSimilarity', 0.6 ) );
+		return isNaN( value ) ? 0.6 : Math.min( 1, Math.max( 0, value ) );
+	}
+
+	/**
+	 * Post types the "Another post" view may copy blocks from. The server limits the list too.
+	 *
+	 * @return {string[]} Post types, empty when the view is off.
+	 */
+	function copyPostTypes() {
+		const types = ( config().copyPostTypes || [] ).slice();
+
+		/**
+		 * Filters the post types blocks can be copied from in the "Another post" view.
+		 *
+		 * Return an empty array to hide the view. The search endpoint applies the PHP filter
+		 * `axle_block_restore_copy_post_types` as well, so this can only narrow the list.
+		 *
+		 * @param {string[]} postTypes Default the post types the user can edit that have Axle Block Restore.
+		 */
+		const filtered = applyFilters( 'axleBlockRestore.copyPostTypes', types );
+		return Array.isArray( filtered ) ? filtered.filter( ( type ) => types.indexOf( type ) !== -1 ) : types;
+	}
 	const MAX_CANDIDATES = 6;
+	const MAX_SOURCE_BLOCKS = 30;
 
 	// Blocks whose inner blocks are not part of their own entity (a template part is a document of its own), so they are never compared.
 	const OWN_NOTHING_INSIDE = [ 'core/template-part', 'core/post-content', 'core/block' ];
@@ -433,10 +483,10 @@
 	 * With `variants` (whole block, content only, styling only) the changes and
 	 * the preview follow the one picked in the changes view.
 	 *
-	 * @param {Object} props Item, status, actions, text to diff against, variants, inner changes, search query, focus flag.
+	 * @param {Object} props Item, status, actions, text to diff against, variants, inner changes, search query, focus flag, extra lines under the text.
 	 * @return {Element} Card.
 	 */
-	function BlockCard( { item, status, actions, compareText, variants, inner, query, focused } ) {
+	function BlockCard( { item, status, actions, compareText, variants, inner, query, focused, meta } ) {
 		const usable = ( variants || [] ).filter( ( variant ) => ! variant.same );
 		const [ view, setView ] = useState( focused && null !== compareText ? 'diff' : null );
 		const [ variantId, setVariantId ] = useState( null );
@@ -475,6 +525,7 @@
 				item.text
 					? el( 'p', { className: 'abr-card__excerpt' }, el( Highlight, { text: matching.excerpt( item.text, query, 240 ), query } ) )
 					: el( 'p', { className: 'abr-card__excerpt is-empty' }, __( 'No text in this block.', 'axle-block-restore' ) ),
+				meta,
 				inside > 0 &&
 					el(
 						'p',
@@ -752,12 +803,385 @@
 	}
 
 	/**
+	 * A time as "3 days ago" in a <time> element, with the exact time as its title.
+	 *
+	 * @param {Object} props ISO time, and the date format of the site.
+	 * @return {Element|null} Element.
+	 */
+	function When( { value, format } ) {
+		if ( ! value ) {
+			return null;
+		}
+		let relative = '';
+		try {
+			relative = humanTimeDiff ? humanTimeDiff( value ) : '';
+		} catch ( e ) {
+			relative = '';
+		}
+		return el( 'time', { dateTime: value, title: dateI18n( format, value ) }, relative || dateI18n( format, value ) );
+	}
+
+	/**
+	 * Blocks that were in recent revisions and are gone now, newest removal first.
+	 *
+	 * @param {Object} props Loaded revisions and their state, the blocks of what is being edited, restore callbacks.
+	 * @return {Element} View.
+	 */
+	function RemovedBlocks( { revisions, loading, error, none, hasMore, loadMore, retry, noun, blocks, canInsertBelow, onPlace, onEnd, onBelow } ) {
+		const limit = useMemo( removedRevisions, [] );
+		const similar = useMemo( removedSimilarity, [] );
+		const looked = revisions.slice( 0, limit );
+		const format = getDateSettings().formats.datetime;
+		// Every block now, nested ones too. Only worked out while this view is open.
+		const currentAll = useMemo( () => matching.flatten( blocks ).map( ( item ) => Object.assign( describe( item.block ), { path: item.path } ) ), [ blocks ] );
+
+		// Loaded 50 at a time, so a higher limit may need the next page.
+		useEffect( () => {
+			if ( revisions.length < limit && hasMore && ! loading && ! error ) {
+				loadMore();
+			}
+		}, [ revisions.length, hasMore, loading, error ] ); // eslint-disable-line react-hooks/exhaustive-deps
+
+		const removed = useMemo( () => {
+			const found = matching.removedBlocks(
+				looked.map( ( revision ) => ( { id: revision.id, items: revision.all } ) ),
+				currentAll,
+				{ similarity: similar }
+			);
+
+			/**
+			 * Filters the blocks listed as removed.
+			 *
+			 * @param {Object[]} entries Removed blocks, newest removal first. Each has name, title, text, path, block, revisionId, revisionIds and rewritten (a block of the same type now sits at its old place).
+			 * @param {Object}   details Revision IDs looked through: `revisionIds`.
+			 */
+			const filtered = applyFilters( 'axleBlockRestore.removedBlocks', found, { revisionIds: looked.map( ( revision ) => revision.id ) } );
+			return Array.isArray( filtered ) ? filtered : found;
+		}, [ looked.length, revisions, currentAll, similar ] ); // eslint-disable-line react-hooks/exhaustive-deps
+		const byId = useMemo( () => {
+			const map = {};
+			revisions.forEach( ( revision ) => {
+				map[ revision.id ] = revision;
+			} );
+			return map;
+		}, [ revisions ] );
+
+		if ( error ) {
+			return el( Notice, { status: 'error', isDismissible: false, actions: [ { label: __( 'Try again', 'axle-block-restore' ), onClick: retry } ] }, error );
+		}
+		if ( none ) {
+			return el(
+				Notice,
+				{ status: 'info', isDismissible: false },
+				/* translators: %s: what is being edited, e.g. "template". */
+				sprintf( __( 'This %s still comes from the theme, so it has no revisions and nothing has been removed from it yet.', 'axle-block-restore' ), noun )
+			);
+		}
+		if ( loading && ! looked.length ) {
+			return el( 'p', { className: 'abr-loading' }, el( Spinner ), ' ', __( 'Looking through revisions…', 'axle-block-restore' ) );
+		}
+		if ( ! looked.length ) {
+			return el(
+				Notice,
+				{ status: 'info', isDismissible: false },
+				/* translators: %s: what is being edited, e.g. "post". */
+				sprintf( __( 'This %s has no revisions yet, so nothing can have been removed from it.', 'axle-block-restore' ), noun )
+			);
+		}
+
+		const summary =
+			sprintf(
+				/* translators: %d: number of removed blocks. */
+				_n( '%d removed block found.', '%d removed blocks found.', removed.length, 'axle-block-restore' ),
+				removed.length
+			) +
+			' ' +
+			sprintf(
+				/* translators: %d: number of revisions looked through. */
+				_n( 'Looked through %d recent revision.', 'Looked through %d recent revisions.', looked.length, 'axle-block-restore' ),
+				looked.length
+			);
+
+		return el(
+			Fragment,
+			null,
+			el( 'p', { className: 'abr-summary' }, summary, loading && el( Fragment, null, ' ', el( Spinner ) ) ),
+			! removed.length &&
+				el(
+					Notice,
+					{ status: 'info', isDismissible: false },
+					__( 'No block from these revisions is missing from the post. Blocks that were only edited are not listed.', 'axle-block-restore' )
+				),
+			removed.map( ( entry ) => {
+				const revision = byId[ entry.revisionId ];
+				const author = revision && revision.axle_block_restore_author;
+				const older = entry.revisionIds.length - 1;
+				const inside = entry.path.length > 1;
+
+				return el( BlockCard, {
+					key: entry.revisionId + ':' + entry.path.join( '.' ) + ':' + entry.print.length,
+					item: entry,
+					status: entry.rewritten ? { type: 'changed', label: __( 'Rewritten since', 'axle-block-restore' ) } : { type: 'removed', label: __( 'Removed', 'axle-block-restore' ) },
+					meta: el(
+						'p',
+						{ className: 'abr-card__meta' },
+						author
+							? /* translators: %s: name of the person who saved the revision. */
+							  sprintf( __( 'Last in a revision saved by %s', 'axle-block-restore' ), author )
+							: __( 'Last in an earlier revision', 'axle-block-restore' ),
+						' · ',
+						el( When, { value: revision && revision.when, format } ),
+						inside && ' · ' + __( 'Was inside another block', 'axle-block-restore' ),
+						older > 0 &&
+							' · ' +
+								sprintf(
+									/* translators: %d: number of older revisions that also have the block. */
+									_n( 'Also in %d older revision', 'Also in %d older revisions', older, 'axle-block-restore' ),
+									older
+								)
+					),
+					actions: el(
+						Fragment,
+						null,
+						el( Button, { variant: 'primary', onClick: () => onPlace( entry, revision, currentAll ) }, __( 'Put it back where it was', 'axle-block-restore' ) ),
+						canInsertBelow && el( Button, { variant: 'secondary', onClick: () => onBelow( entry ) }, __( 'Insert below the selected block', 'axle-block-restore' ) ),
+						el( Button, { variant: 'secondary', onClick: () => onEnd( entry ) }, __( 'Insert at the end', 'axle-block-restore' ) )
+					),
+				} );
+			} )
+		);
+	}
+
+	/**
+	 * The current content of a post, as a version shaped like a revision.
+	 *
+	 * @param {Object} post Post: REST base, namespace and ID.
+	 * @return {Object} The version, loading flag, error and retry().
+	 */
+	function useCurrentVersion( post ) {
+		const [ state, setState ] = useState( { version: null, loading: true, error: null } );
+		const [ attempt, setAttempt ] = useState( 0 );
+
+		useEffect( () => {
+			setState( { version: null, loading: true, error: null } );
+			wp.apiFetch( {
+				path: addQueryArgs( `/${ post.restNamespace }/${ post.restBase }/${ post.id }`, { context: 'edit', _fields: 'id,modified_gmt,content.raw' } ),
+			} )
+				.then( ( item ) => setState( { version: prepare( Object.assign( {}, item, { id: 'current', date_gmt: item.modified_gmt } ) ), loading: false, error: null } ) )
+				.catch( ( fetchError ) => setState( { version: null, loading: false, error: ( fetchError && fetchError.message ) || __( 'Could not load this post.', 'axle-block-restore' ) } ) );
+		}, [ post.id, post.restBase, post.restNamespace, attempt ] );
+
+		return Object.assign( {}, state, { retry: () => setAttempt( attempt + 1 ) } );
+	}
+
+	/**
+	 * Posts the user can edit that match a search, from the plugin's own route, which checks `edit_post` on each.
+	 *
+	 * @param {string} search    Text to search for.
+	 * @param {number} excludeId Post being edited, left out.
+	 * @return {Object} Posts, loading flag, error and retry().
+	 */
+	function useSourcePosts( search, excludeId ) {
+		const [ state, setState ] = useState( { posts: [], loading: true, error: null } );
+		const [ attempt, setAttempt ] = useState( 0 );
+
+		useEffect( () => {
+			let current = true;
+			const timer = setTimeout( () => {
+				setState( ( previous ) => Object.assign( {}, previous, { loading: true, error: null } ) );
+				wp.apiFetch( { path: addQueryArgs( '/axle-block-restore/v1/posts', { search, exclude_id: excludeId || undefined } ) } )
+					.then( ( posts ) => current && setState( { posts, loading: false, error: null } ) )
+					.catch( ( fetchError ) => current && setState( { posts: [], loading: false, error: ( fetchError && fetchError.message ) || __( 'Could not search posts.', 'axle-block-restore' ) } ) );
+			}, 250 );
+			return () => {
+				current = false;
+				clearTimeout( timer );
+			};
+		}, [ search, excludeId, attempt ] );
+
+		return Object.assign( {}, state, { retry: () => setAttempt( attempt + 1 ) } );
+	}
+
+	/**
+	 * Blocks of one version of another post, with buttons to copy each into the post being edited.
+	 *
+	 * @param {Object} props Source post, whether a block is selected to insert below, and the copy callback.
+	 * @return {Element} View.
+	 */
+	function SourceBlocks( { post, canInsertBelow, onInsert } ) {
+		const currentVersion = useCurrentVersion( post );
+		const history = useRevisions( post );
+		const [ versionId, setVersionId ] = useState( 'current' );
+		const [ filter, setFilter ] = useState( '' );
+		const [ shown, setShown ] = useState( MAX_SOURCE_BLOCKS );
+		const format = getDateSettings().formats.datetime;
+		const versions = ( currentVersion.version ? [ currentVersion.version ] : [] ).concat( history.revisions );
+		const version = versions.find( ( item ) => item.id === versionId ) || null;
+		const needle = filter.trim().toLowerCase();
+		const blocks = useMemo(
+			() => ( version ? version.all.filter( ( item ) => ! needle || item.text.toLowerCase().indexOf( needle ) !== -1 || item.title.toLowerCase().indexOf( needle ) !== -1 ) : [] ),
+			[ version, needle ]
+		);
+
+		if ( currentVersion.error ) {
+			return el( Notice, { status: 'error', isDismissible: false, actions: [ { label: __( 'Try again', 'axle-block-restore' ), onClick: currentVersion.retry } ] }, currentVersion.error );
+		}
+		if ( history.error ) {
+			return el( Notice, { status: 'error', isDismissible: false, actions: [ { label: __( 'Try again', 'axle-block-restore' ), onClick: history.retry } ] }, history.error );
+		}
+		if ( currentVersion.loading || ! version ) {
+			return el( 'p', { className: 'abr-loading' }, el( Spinner ), ' ', __( 'Loading this post…', 'axle-block-restore' ) );
+		}
+
+		const label = ( item ) =>
+			'current' === item.id
+				? sprintf(
+						/* translators: %s: date the post was last saved. */
+						__( 'Current version, saved %s', 'axle-block-restore' ),
+						dateI18n( format, item.when )
+				  )
+				: [ dateI18n( format, item.when ), item.axle_block_restore_author ].filter( Boolean ).join( ' · ' );
+
+		return el(
+			Fragment,
+			null,
+			el( SelectControl, {
+				label: __( 'Version to copy from', 'axle-block-restore' ),
+				value: versionId,
+				options: versions.map( ( item ) => ( { value: item.id, label: label( item ) } ) ),
+				onChange: ( value ) => {
+					setVersionId( 'current' === value ? value : parseInt( value, 10 ) || value );
+					setShown( MAX_SOURCE_BLOCKS );
+				},
+				help: history.hasMore || history.loading ? __( 'Showing the newest revisions.', 'axle-block-restore' ) : undefined,
+				__nextHasNoMarginBottom: true,
+				__next40pxDefaultSize: true,
+			} ),
+			el( SearchControl, {
+				label: __( 'Filter blocks by text', 'axle-block-restore' ),
+				value: filter,
+				onChange: ( value ) => {
+					setFilter( value );
+					setShown( MAX_SOURCE_BLOCKS );
+				},
+				__nextHasNoMarginBottom: true,
+				__next40pxDefaultSize: true,
+			} ),
+			! version.all.length && el( Notice, { status: 'info', isDismissible: false }, __( 'This version has no blocks.', 'axle-block-restore' ) ),
+			version.all.length > 0 && ! blocks.length && el( Notice, { status: 'info', isDismissible: false }, __( 'No block in this version matches that text.', 'axle-block-restore' ) ),
+			blocks.slice( 0, shown ).map( ( item ) =>
+				el( BlockCard, {
+					key: version.id + ':' + item.path.join( '.' ),
+					item,
+					status: null,
+					meta: item.path.length > 1 ? el( 'p', { className: 'abr-card__meta' }, __( 'Inside another block', 'axle-block-restore' ) ) : null,
+					actions: el(
+						Fragment,
+						null,
+						canInsertBelow && el( Button, { variant: 'primary', onClick: () => onInsert( item.block, 'below', version ) }, __( 'Insert below the selected block', 'axle-block-restore' ) ),
+						el( Button, { variant: canInsertBelow ? 'secondary' : 'primary', onClick: () => onInsert( item.block, 'end', version ) }, __( 'Insert at the end', 'axle-block-restore' ) )
+					),
+				} )
+			),
+			blocks.length > shown && el( Button, { variant: 'secondary', onClick: () => setShown( shown + MAX_SOURCE_BLOCKS ) }, __( 'Show more blocks', 'axle-block-restore' ) )
+		);
+	}
+
+	/**
+	 * Copy a block from another post: search the posts the user can edit, pick a version, pick a block.
+	 *
+	 * @param {Object} props ID of the post being edited, whether a block is selected, and the copy callback.
+	 * @return {Element} View.
+	 */
+	function OtherPost( { excludeId, canInsertBelow, onInsert } ) {
+		const [ input, setInput ] = useState( '' );
+		const [ chosen, setChosen ] = useState( null );
+		const { posts, loading, error, retry } = useSourcePosts( input.trim(), 'number' === typeof excludeId ? excludeId : parseInt( excludeId, 10 ) || 0 );
+		const format = getDateSettings().formats.datetime;
+
+		if ( chosen ) {
+			return el(
+				Fragment,
+				null,
+				el(
+					'div',
+					{ className: 'abr-source' },
+					el( 'strong', null, chosen.title || __( '(no title)', 'axle-block-restore' ) ),
+					el( 'span', { className: 'abr-card__meta' }, chosen.type_label ),
+					el( Button, { variant: 'tertiary', onClick: () => setChosen( null ) }, __( 'Choose another post', 'axle-block-restore' ) )
+				),
+				el( SourceBlocks, {
+					key: chosen.id,
+					post: { id: chosen.id, restBase: chosen.rest_base, restNamespace: chosen.rest_namespace },
+					canInsertBelow,
+					onInsert: ( block, how, version ) => onInsert( block, how, version, chosen ),
+				} )
+			);
+		}
+
+		return el(
+			Fragment,
+			null,
+			el( 'p', { className: 'abr-summary' }, __( 'Search the posts and pages you can edit, pick one of its versions, then copy a block from it.', 'axle-block-restore' ) ),
+			el( SearchControl, {
+				label: __( 'Search posts and pages', 'axle-block-restore' ),
+				placeholder: __( 'Search by title or text…', 'axle-block-restore' ),
+				value: input,
+				onChange: setInput,
+				__nextHasNoMarginBottom: true,
+				__next40pxDefaultSize: true,
+			} ),
+			error && el( Notice, { status: 'error', isDismissible: false, actions: [ { label: __( 'Try again', 'axle-block-restore' ), onClick: retry } ] }, error ),
+			loading && el( 'p', { className: 'abr-loading' }, el( Spinner ), ' ', __( 'Searching…', 'axle-block-restore' ) ),
+			! loading &&
+				! error &&
+				! posts.length &&
+				el(
+					Notice,
+					{ status: 'info', isDismissible: false },
+					input.trim() ? __( 'None of the posts you can edit match that search.', 'axle-block-restore' ) : __( 'There are no other posts you can edit to copy from.', 'axle-block-restore' )
+				),
+			! error &&
+				posts.length > 0 &&
+				el(
+					'ul',
+					{ className: 'abr-results', 'aria-label': __( 'Posts you can edit', 'axle-block-restore' ) },
+					posts.map( ( post ) =>
+						el(
+							'li',
+							{ key: post.id, className: 'abr-result' },
+							el(
+								Card,
+								{ size: 'small' },
+								el(
+									CardBody,
+									null,
+									el( 'p', { className: 'abr-result__text' }, el( 'strong', null, post.title || __( '(no title)', 'axle-block-restore' ) ) ),
+									el(
+										'p',
+										{ className: 'abr-result__meta' },
+										post.type_label,
+										' · ',
+										post.status,
+										' · ',
+										el( When, { value: post.modified, format } )
+									),
+									el( Button, { variant: 'secondary', onClick: () => setChosen( post ) }, __( 'Choose this post', 'axle-block-restore' ) )
+								)
+							)
+						)
+					)
+				)
+		);
+	}
+
+	/**
 	 * The restore window: search, revision list, and the selected revision's blocks.
 	 *
-	 * @param {Object} props Selected block's client ID (or null for the whole entity), focusSearch and onClose.
+	 * @param {Object} props Selected block's client ID (or null for the whole entity), focusSearch, the view to open on ("revisions", "removed" or "other") and onClose.
 	 * @return {Element} Modal.
 	 */
-	function RestoreModal( { clientId, focusSearch, onClose } ) {
+	function RestoreModal( { clientId, focusSearch, view: initialView, onClose } ) {
 		const data = useSelect(
 			( select ) => {
 				const blockEditor = select( 'core/block-editor' );
@@ -780,11 +1204,13 @@
 
 				// Blocks of the entity: inside the template part for a block that lives in one, else the whole editor.
 				let blocks = blockEditor.getBlocks();
+				let rootId;
 				if ( clientId && 'wp_template_part' === entity.postType && entity.postType !== select( 'core/editor' ).getCurrentPostType() ) {
 					const holderId = blockEditor
 						.getBlockParents( clientId, true )
 						.find( ( id ) => 'core/template-part' === blockEditor.getBlockName( id ) );
 					blocks = holderId ? blockEditor.getBlocks( holderId ) : blocks;
+					rootId = holderId || undefined;
 				}
 
 				// Templates and parts have no post until they are saved once. Their record then has no `wp_id`.
@@ -802,6 +1228,8 @@
 					},
 					target,
 					blocks,
+					rootId,
+					selectedId: blockEditor.getSelectedBlockClientId(),
 				};
 			},
 			[ clientId ]
@@ -811,6 +1239,7 @@
 		const { createSuccessNotice } = useDispatch( 'core/notices' );
 		const { revisions, loading, error, none, hasMore, loadMore, retry } = useRevisions( data.post );
 		const [ selectedId, setSelectedId ] = useState( null );
+		const [ view, setView ] = useState( [ 'removed', 'other' ].indexOf( initialView ) !== -1 ? initialView : 'revisions' );
 		const [ input, setInput ] = useState( '' );
 		const [ query, setQuery ] = useState( '' );
 		const rootRef = useRef();
@@ -830,8 +1259,9 @@
 			 * @param {string}      details.postType     Post type of what is being restored in.
 			 * @param {number|string} details.postId     Its ID. Templates and template parts have IDs like "theme//slug".
 			 * @param {boolean}     details.focusSearch  True when it opened on the search box.
+			 * @param {string}      details.view         The view it opened on: revisions, removed or other.
 			 */
-			doAction( 'axleBlockRestore.opened', { clientId: clientId || null, postType: data.post.postType, postId: data.post.id, focusSearch: !! focusSearch } );
+			doAction( 'axleBlockRestore.opened', { clientId: clientId || null, postType: data.post.postType, postId: data.post.id, focusSearch: !! focusSearch, view } );
 		}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 		useEffect( () => {
@@ -846,6 +1276,11 @@
 		}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 		const current = useMemo( () => data.blocks.map( describe ), [ data.blocks ] );
+		// The selected block counts as a place to insert below only when it belongs to what is being edited.
+		const below = useMemo( () => {
+			const found = data.selectedId ? matching.flatten( data.blocks ).find( ( item ) => item.block.clientId === data.selectedId ) : null;
+			return found ? { clientId: data.selectedId, path: found.path } : null;
+		}, [ data.blocks, data.selectedId ] );
 		const target = data.target;
 
 		// Differences per revision, against the editor as it is now.
@@ -894,20 +1329,22 @@
 
 		const selected = revisionsById[ selectedId ];
 		const restored = __( 'Block restored. Save to keep it, or press Ctrl+Z (⌘Z) to undo.', 'axle-block-restore' );
-		const done = ( mode, block ) => {
+		const done = ( mode, block, revisionId, extra ) => {
 			createSuccessNotice( restored, { type: 'snackbar' } );
 
 			/**
 			 * Fires after a block is restored from a revision.
 			 *
 			 * @param {Object} details            What happened.
-			 * @param {string} details.mode       replace, content, style, insert-after, replace-at, insert-at, inner-replace or inner-insert.
+			 * @param {string} details.mode       replace, content, style, insert-after, replace-at, insert-at, inner-replace, inner-insert, removed-place, removed-end, removed-below, other-post-below or other-post-end.
 			 * @param {Object} details.block      The restored block, as inserted.
-			 * @param {number} details.revisionId Revision it came from.
+			 * @param {number|string} details.revisionId Revision it came from.
 			 * @param {number|string} details.postId Post, template, template part or pattern being edited.
 			 * @param {string} details.postType   Its post type.
+			 * @param {number} [details.sourcePostId]   For other-post-below and other-post-end: the post the block was copied from. `revisionId` is then a revision of that post, or "current".
+			 * @param {string} [details.sourcePostType] Its post type.
 			 */
-			doAction( 'axleBlockRestore.restored', { mode, block, revisionId: selectedId, postId: data.post.id, postType: data.post.postType } );
+			doAction( 'axleBlockRestore.restored', Object.assign( { mode, block, revisionId: undefined === revisionId ? selectedId : revisionId, postId: data.post.id, postType: data.post.postType }, extra || {} ) );
 			onClose();
 		};
 
@@ -927,6 +1364,41 @@
 				insertBlocks( [ copy ], Math.min( entry.index, parent.innerBlocks.length ), parent.clientId );
 				done( 'inner-insert', copy );
 			}
+		};
+
+		// Puts a removed block back: where it was, at the end, or below the selected block. One insert, so one undo step.
+		const putBack = ( how, entry, revision, currentAll ) => {
+			const copy = cloneBlock( entry.block );
+			let rootClientId = data.rootId;
+			let index = data.blocks.length;
+
+			if ( 'place' === how ) {
+				const where = matching.placement( revision.all, entry, currentAll );
+				const parent = where.parentPath.length ? matching.blockAt( { innerBlocks: data.blocks }, where.parentPath ) : null;
+				rootClientId = parent ? parent.clientId : data.rootId;
+				index = Math.min( where.index, parent ? parent.innerBlocks.length : data.blocks.length );
+			} else if ( 'below' === how && below ) {
+				const reader = wp.data.select( 'core/block-editor' );
+				rootClientId = reader.getBlockRootClientId( below.clientId ) || data.rootId;
+				index = reader.getBlockIndex( below.clientId ) + 1;
+			}
+			insertBlocks( [ copy ], index, rootClientId );
+			done( 'removed-' + how, copy, entry.revisionId );
+		};
+
+		// Copies a block from another post: below the selected block, or at the end. One insert, so one undo step.
+		const copyIn = ( block, how, version, source ) => {
+			const copy = cloneBlock( block );
+			let rootClientId = data.rootId;
+			let index = data.blocks.length;
+
+			if ( 'below' === how && below ) {
+				const reader = wp.data.select( 'core/block-editor' );
+				rootClientId = reader.getBlockRootClientId( below.clientId ) || data.rootId;
+				index = reader.getBlockIndex( below.clientId ) + 1;
+			}
+			insertBlocks( [ copy ], index, rootClientId );
+			done( 'other-post-' + how, copy, version.id, { sourcePostId: source.id, sourcePostType: source.type } );
 		};
 
 		// Arrow keys, Home and End move both the selection and the focus (roving tabindex).
@@ -1015,6 +1487,29 @@
 		}
 
 		const searching = query.trim().length >= 2;
+		const copyTypes = useMemo( copyPostTypes, [] );
+		const tabs = [
+			{ name: 'revisions', title: __( 'By revision', 'axle-block-restore' ) },
+			{ name: 'removed', title: __( 'Removed blocks', 'axle-block-restore' ) },
+		];
+		if ( copyTypes.length ) {
+			tabs.push( { name: 'other', title: __( 'Another post', 'axle-block-restore' ) } );
+		}
+		const removedPane = el( RemovedBlocks, {
+			revisions,
+			loading,
+			error,
+			none,
+			hasMore,
+			loadMore,
+			retry,
+			noun: data.post.noun,
+			blocks: data.blocks,
+			canInsertBelow: !! below,
+			onPlace: ( entry, revision, all ) => putBack( 'place', entry, revision, all ),
+			onEnd: ( entry ) => putBack( 'end', entry ),
+			onBelow: ( entry ) => putBack( 'below', entry ),
+		} );
 
 		return el(
 			Modal,
@@ -1028,80 +1523,101 @@
 				className: 'abr-modal',
 			},
 			el(
-				'div',
-				{ className: 'abr-search', ref: rootRef },
-				el( SearchControl, {
-					label: __( 'Find text in old revisions', 'axle-block-restore' ),
-					placeholder: target
-						? __( 'Find an old version of this block by its text…', 'axle-block-restore' )
-						: __( 'Find deleted or changed text…', 'axle-block-restore' ),
-					value: input,
-					onChange: setInput,
-					__nextHasNoMarginBottom: true,
-					__next40pxDefaultSize: true,
-				} )
-			),
-			searching
-				? el( SearchResults, {
-						results,
-						revisionsById,
-						labelFor,
-						query,
-						onPick: ( result ) => {
-							setSelectedId( result.revisionIds[ 0 ] );
-							setFocusText( result.text );
-							setInput( '' );
-							setQuery( '' );
-						},
-				  } )
-				: el(
-						'div',
-						{ className: 'abr-layout' },
+				TabPanel,
+				{
+					className: 'abr-tabs',
+					tabs: tabs,
+					initialTabName: view,
+					onSelect: setView,
+				},
+				( tab ) => {
+					if ( 'removed' === tab.name ) {
+						return removedPane;
+					}
+					if ( 'other' === tab.name ) {
+						return el( OtherPost, { excludeId: data.post.id, canInsertBelow: !! below, onInsert: copyIn } );
+					}
+					return el(
+						Fragment,
+						null,
 						el(
 							'div',
-							{
-								className: 'abr-revisions',
-								role: 'listbox',
-								'aria-label': __( 'Revisions', 'axle-block-restore' ),
-								onKeyDown: moveSelection,
-							},
-							revisions.map( ( revision ) => {
-								const isAutosave = revision.slug && revision.slug.indexOf( '-autosave-' ) !== -1;
-								const count = differences[ revision.id ];
-
-								return el(
-									Button,
-									{
-										key: revision.id,
-										id: 'abr-revision-' + revision.id,
-										role: 'option',
-										'aria-selected': revision.id === selectedId,
-										// Only the selected option is in the tab order; the arrow keys reach the rest.
-										tabIndex: revision.id === selectedId ? 0 : -1,
-										// Core's pressed look, as a class: aria-pressed is not allowed on an option.
-										className: 'abr-revision' + ( revision.id === selectedId ? ' is-selected is-pressed' : '' ),
-										onClick: () => {
-											setSelectedId( revision.id );
-											setFocusText( '' );
-										},
-									},
-									el( 'span', { className: 'abr-revision__date' }, labelFor( revision ) ),
-									el(
-										'span',
-										{ className: 'abr-revision__meta' },
-										isAutosave && el( 'span', { className: 'abr-tag' }, __( 'Autosave', 'axle-block-restore' ) ),
-										count
-											/* translators: %d: number of differences. */
-											? sprintf( _n( '%d difference', '%d differences', count, 'axle-block-restore' ), count )
-											: __( 'Same as now', 'axle-block-restore' )
-									)
-								);
-							} ),
-							loading && el( 'p', { className: 'abr-loading' }, el( Spinner ), ' ', __( 'Loading revisions…', 'axle-block-restore' ) ),
-							hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', 'axle-block-restore' ) )
+							{ className: 'abr-search', ref: rootRef },
+							el( SearchControl, {
+								label: __( 'Find text in old revisions', 'axle-block-restore' ),
+								placeholder: target
+									? __( 'Find an old version of this block by its text…', 'axle-block-restore' )
+									: __( 'Find deleted or changed text…', 'axle-block-restore' ),
+								value: input,
+								onChange: setInput,
+								__nextHasNoMarginBottom: true,
+								__next40pxDefaultSize: true,
+							} )
 						),
-						el( 'div', { className: 'abr-blocks' }, body )
-				  )
+						searching
+							? el( SearchResults, {
+									results,
+									revisionsById,
+									labelFor,
+									query,
+									onPick: ( result ) => {
+										setSelectedId( result.revisionIds[ 0 ] );
+										setFocusText( result.text );
+										setInput( '' );
+										setQuery( '' );
+									},
+							  } )
+							: el(
+									'div',
+									{ className: 'abr-layout' },
+									el(
+										'div',
+										{
+											className: 'abr-revisions',
+											role: 'listbox',
+											'aria-label': __( 'Revisions', 'axle-block-restore' ),
+											onKeyDown: moveSelection,
+										},
+										revisions.map( ( revision ) => {
+											const isAutosave = revision.slug && revision.slug.indexOf( '-autosave-' ) !== -1;
+											const count = differences[ revision.id ];
+	
+											return el(
+												Button,
+												{
+													key: revision.id,
+													id: 'abr-revision-' + revision.id,
+													role: 'option',
+													'aria-selected': revision.id === selectedId,
+													// Only the selected option is in the tab order; the arrow keys reach the rest.
+													tabIndex: revision.id === selectedId ? 0 : -1,
+													// Core's pressed look, as a class: aria-pressed is not allowed on an option.
+													className: 'abr-revision' + ( revision.id === selectedId ? ' is-selected is-pressed' : '' ),
+													onClick: () => {
+														setSelectedId( revision.id );
+														setFocusText( '' );
+													},
+												},
+												el( 'span', { className: 'abr-revision__date' }, labelFor( revision ) ),
+												el(
+													'span',
+													{ className: 'abr-revision__meta' },
+													isAutosave && el( 'span', { className: 'abr-tag' }, __( 'Autosave', 'axle-block-restore' ) ),
+													count
+														/* translators: %d: number of differences. */
+														? sprintf( _n( '%d difference', '%d differences', count, 'axle-block-restore' ), count )
+														: __( 'Same as now', 'axle-block-restore' )
+												)
+											);
+										} ),
+										loading && el( 'p', { className: 'abr-loading' }, el( Spinner ), ' ', __( 'Loading revisions…', 'axle-block-restore' ) ),
+										hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', 'axle-block-restore' ) )
+									),
+									el( 'div', { className: 'abr-blocks' }, body )
+							  )
+					);
+				}
+			)
 		);
 	}
 

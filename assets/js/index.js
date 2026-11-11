@@ -1,6 +1,6 @@
 /**
  * Axle Block Restore: adds "Restore from a revision…" to each block's menu,
- * "Restore blocks from a revision" to the editor's main menu, and three
+ * "Restore blocks from a revision" to the editor's main menu, and four
  * commands to the command palette. Works in the post editor and the Site Editor.
  */
 ( function ( wp, restore ) {
@@ -87,6 +87,15 @@
 								close();
 								open( { clientId: null, focusSearch: true } );
 							},
+						},
+						{
+							name: 'axle-block-restore/removed',
+							label: __( 'Show removed blocks', 'axle-block-restore' ),
+							icon: icon( 'trash' ),
+							callback: ( { close } ) => {
+								close();
+								open( { clientId: null, view: 'removed' } );
+							},
 						}
 					);
 				}
@@ -108,7 +117,7 @@
 				 *
 				 * Each entry is a command for `wp.commands`: name, label, icon and callback.
 				 *
-				 * @param {Object[]}    entries  Default: restore blocks, find text, and (with a block selected) restore the selected block.
+				 * @param {Object[]}    entries  Default: restore blocks, find text, show removed blocks, and (with a block selected) restore the selected block.
 				 * @param {string|null} blockId  Client ID of the selected block, or null.
 				 */
 				return applyFilters( 'axleBlockRestore.commands', list, state.blockId );
@@ -156,7 +165,7 @@
 					__( 'Restore from a revision…', 'axle-block-restore' )
 				);
 			} ),
-			open && el( restore.RestoreModal, { clientId: open.clientId, focusSearch: !! open.focusSearch, onClose: () => setOpen( null ) } )
+			open && el( restore.RestoreModal, { clientId: open.clientId, focusSearch: !! open.focusSearch, view: open.view || 'revisions', onClose: () => setOpen( null ) } )
 		);
 	}
 
