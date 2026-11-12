@@ -23,7 +23,15 @@ Part of [Axle](https://axlewp.com/) by AryanX, a family of free plugins for runn
 1. Select the block and open its menu (⋮).
 2. Choose **Restore from a revision…**
 3. Pick a revision. You see the versions of that block in it, best match first.
-4. Click **Replace current block**, or **Insert below it** to compare them side by side.
+4. Click **Replace current block**, or **Insert below as a copy** to put the old version next to the current one and compare them.
+
+**See every version of one block**
+
+Not sure who changed the pricing paragraph, or what it said last month? Select the block, open its menu (⋮) and choose **Block history**. You see only the revisions where that block changed, newest first, with who saved each one, when, and the words that changed. A block that was removed and added back shows both. From any entry you can preview that version, restore it, insert it below as a copy, or copy it to paste into another post. Long histories load a page of revisions at a time, with a count, and stop at 200 revisions until you ask to look further back.
+
+**Put a version next to the current block**
+
+Every restore has **Insert below as a copy**. The old version goes under the current block, with new IDs and no repeated anchor, so you can compare the two and keep the better one. After a restore a notice offers **Undo**, and after a copy also **Compare**, which scrolls to the new block.
 
 **Bring back a deleted block**
 
@@ -54,7 +62,7 @@ A group, columns or any block with inner blocks comes back with everything insid
 
 **In the Site Editor and the command palette**
 
-Templates, template parts and synced patterns have revisions too, and the same two menu entries work on them. A block inside a template part restores from the part's own revisions. The command palette (Ctrl+K, ⌘K) has "Restore blocks from a revision", "Restore selected block from a revision", "Find text in old revisions" and "Show removed blocks".
+Templates, template parts and synced patterns have revisions too, and the same two menu entries work on them. A block inside a template part restores from the part's own revisions. The command palette (Ctrl+K, ⌘K) has "Restore blocks from a revision", "Restore selected block from a revision", "Show history of selected block", "Find text in old revisions" and "Show removed blocks".
 
 Every restore is a normal edit: press Ctrl+Z (⌘Z on a Mac) to undo it, and nothing is saved until you update the post.
 
@@ -63,6 +71,7 @@ Every restore is a normal edit: press Ctrl+Z (⌘Z on a Mac) to undo it, and not
 * Each revision shows who saved it and how many blocks differ from now. Autosaves are labelled, and the window opens on the newest revision that actually differs.
 * Works with any block, including blocks from other plugins, and with every post type that has revisions.
 * Revisions are loaded without rendering them on the server, so posts with many revisions open quickly.
+* For developers and agents: WP-CLI commands (`wp axle-block-restore`), abilities that list revisions, find text, read the history of a block and restore a block, and a Site Health test that warns when a post type keeps no revisions.
 
 No settings and nothing stored in the database.
 
@@ -84,6 +93,14 @@ It appears in the block editor for post types that keep revisions, such as posts
 
 Yes, for templates, template parts and synced patterns. A template or template part that still comes from the theme's files has no revisions until you save it once. In a template, WordPress locks the blocks of a template part to content editing, so their block menu has no restore item: choose **Edit original** on the part, or use the command palette.
 
+= How does Block history know which block is which? =
+
+Blocks have no permanent ID between saves, so it follows the block from the newest revision to the oldest. In each revision it takes the identical block of the same type, or else the block of that type with the most words in common. A block that only moved has no entry for the move. If a paragraph was split in two, each half shows the history of the original. Developers can change how alike two versions must be with the `axleBlockRestore.historySimilarity` filter.
+
+= How far back does Block history look? =
+
+At the newest 200 revisions, a page at a time, then it offers **Look further back**. Developers can change that with the `axleBlockRestore.historyRevisions` filter. Agents and WP-CLI read up to 200 revisions by default, which the `axle_block_restore_history_max_revisions` filter changes.
+
 = How far back does the removed blocks list look? =
 
 At the newest 20 revisions. Developers can change that with the `axleBlockRestore.removedRevisions` filter. A block you only edited is not "removed": it has to have no block of the same type with similar words left in the post. A rewritten block is listed with the label **Rewritten since**.
@@ -103,6 +120,7 @@ Attributes with `role: content` in a block's `block.json`, and text read from th
 3. Finding deleted text across revisions.
 4. Restoring a block of a template part in the Site Editor.
 5. Restoring a group, with what differs inside it.
+6. The history of one block: each version, who saved it, when, and the words that changed.
 
 == Changelog ==
 
