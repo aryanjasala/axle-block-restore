@@ -142,6 +142,24 @@
 	gap: 8px;
 }
 
+/* Block history */
+.abr-timeline {
+	margin: 0;
+	padding: 0;
+}
+
+.abr-timeline__item {
+	list-style: none;
+	margin: 0;
+}
+
+.abr-history .abr-summary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0 4px;
+}
+
 /* Search results */
 .abr-results {
 	margin: 0;

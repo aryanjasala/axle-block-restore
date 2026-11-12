@@ -7,7 +7,9 @@
 
 namespace AryanX\Axle\BlockRestore;
 
+use AryanX\Axle\BlockRestore\Cli\Command;
 use AryanX\Axle\BlockRestore\Editor\Assets;
+use AryanX\Axle\BlockRestore\Health\Revisions;
 use AryanX\Axle\BlockRestore\Rest\PostSearch;
 use AryanX\Axle\BlockRestore\Rest\RevisionAuthor;
 use AryanX\Axle\BlockRestore\Rest\RevisionContent;
@@ -33,9 +35,14 @@ final class Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 
-			$services = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new PostSearch(), new Abilities() );
+			$abilities = new Abilities();
+			$services  = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new PostSearch(), $abilities, new Revisions() );
 			foreach ( $services as $service ) {
 				$service->register();
+			}
+
+			if ( defined( 'WP_CLI' ) && WP_CLI ) {
+				\WP_CLI::add_command( 'axle-block-restore', new Command( $abilities ) );
 			}
 		}
 	}

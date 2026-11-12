@@ -803,6 +803,307 @@
 		return ( start > 0 ? '…' : '' ) + text.slice( start, start + length ).trim() + ( start + length < text.length ? '…' : '' );
 	}
 
+	// How alike two versions of a block must be to count as the same block in the block history.
+	var HISTORY_SIMILARITY = 0.5;
+	// A block of the same type at the same place needs less: a rewrite in place is still an edit of that block.
+	var HISTORY_POSITION_SIMILARITY = 0.2;
+
+	/**
+	 * How close two block paths are: shared leading steps first, then how far apart the last steps are.
+	 *
+	 * @param {number[]} a Path.
+	 * @param {number[]} b Path.
+	 * @return {number} Higher is closer.
+	 */
+	function pathCloseness( a, b ) {
+		var shared = 0;
+
+		while ( shared < a.length && shared < b.length && a[ shared ] === b[ shared ] ) {
+			shared++;
+		}
+
+		return shared * 1000 - Math.abs( a[ a.length - 1 ] - b[ b.length - 1 ] ) - Math.abs( a.length - b.length ) * 10;
+	}
+
+	/**
+	 * The block in one revision that is the same block as `tracked`, or null.
+	 *
+	 * An identical block of the same type wins (the nearest one when there are
+	 * copies). Otherwise the most alike block of that type, which must share
+	 * enough words, or sit at the same place and share a few. Blocks with no
+	 * text only match at the same place.
+	 *
+	 * @param {Array<{name: string, path: number[], text: string, print: string}>} items    Blocks of the revision, nested ones too.
+	 * @param {{name: string, path: number[], text: string, print: string}}       tracked  Block to find.
+	 * @param {{similarity: number, positionSimilarity: number}}                  settings Thresholds.
+	 * @param {Array}                                                             [newer]  Blocks of the next newer version of the post. With copies of the block there, an identical block elsewhere may be a twin, so an edited block at the same place wins.
+	 * @return {Object|null} Item of the revision.
+	 */
+	function findCounterpart( items, tracked, settings, newer ) {
+		var candidates = rankCandidates( items, tracked );
+		var exact = candidates.filter( function ( item ) {
+			return item.print === tracked.print;
+		} );
+		var best = null;
+		var bestScore = -1;
+		var twins;
+
+		if ( exact.length ) {
+			twins = ( newer || [] ).filter( function ( other ) {
+				return other.name === tracked.name && other.print === tracked.print;
+			} ).length;
+			if ( twins > 1 && ! exact.some( function ( item ) {
+				return item.samePosition;
+			} ) ) {
+				best = candidates.find( function ( item ) {
+					return item.samePosition && similarity( item.text, tracked.text ) >= settings.similarity;
+				} );
+				if ( best ) {
+					return best;
+				}
+			}
+			return exact.sort( function ( a, b ) {
+				return pathCloseness( b.path, tracked.path ) - pathCloseness( a.path, tracked.path );
+			} )[ 0 ];
+		}
+
+		candidates.forEach( function ( item ) {
+			var alike = similarity( item.text, tracked.text );
+			var accepted = '' === item.text && '' === tracked.text ? item.samePosition : alike >= settings.similarity || ( item.samePosition && alike >= settings.positionSimilarity );
+			var score = alike + ( item.samePosition ? 0.3 : 0 );
+
+			if ( accepted && score > bestScore ) {
+				best = item;
+				bestScore = score;
+			}
+		} );
+
+		return best;
+	}
+
+	/**
+	 * Settings of the block history from the options, with safe defaults.
+	 *
+	 * @param {{similarity: number, positionSimilarity: number}} [options] Thresholds from 0 to 1.
+	 * @return {{similarity: number, positionSimilarity: number}} Settings.
+	 */
+	function historySettings( options ) {
+		var given = options || {};
+		var clamp = function ( value, fallback ) {
+			return 'number' === typeof value && ! isNaN( value ) ? Math.min( 1, Math.max( 0, value ) ) : fallback;
+		};
+
+		return {
+			similarity: clamp( given.similarity, HISTORY_SIMILARITY ),
+			positionSimilarity: clamp( given.positionSimilarity, HISTORY_POSITION_SIMILARITY ),
+		};
+	}
+
+	/**
+	 * Starts following a block back through revisions.
+	 *
+	 * @param {{name: string, path: number[], text: string, print: string, block: Object}} target The block as it is in the editor now.
+	 * @param {Array}                                                                   [items] Every block in the editor now, nested ones too. Helps tell copies of a block apart.
+	 * @return {{target: Object, tracked: Object, newer: Array, steps: Array}} Timeline with no revisions looked through yet.
+	 */
+	function startTimeline( target, items ) {
+		return { target: target, tracked: target, newer: items || [], steps: [] };
+	}
+
+	/**
+	 * Looks through more revisions, going further back. Returns a new timeline; the old one is unchanged.
+	 *
+	 * Blocks have no stable IDs between saves, so each revision is searched for
+	 * the counterpart of the last version found. When a revision has none, the
+	 * block was not in the post then, and the search goes on from the last
+	 * version found, in case it comes back in an older revision.
+	 *
+	 * @param {{target: Object, tracked: Object, steps: Array}} timeline  Result of startTimeline() or an earlier call.
+	 * @param {Array<{id: *, when: string, author: string, autosave: boolean, items: Array}>} revisions Next older revisions, newest first. Each item is `{name, path, text, print, block}`.
+	 * @param {{similarity: number, positionSimilarity: number}} [options] Thresholds.
+	 * @return {{target: Object, tracked: Object, steps: Array}} Timeline including the new revisions.
+	 */
+	function advanceTimeline( timeline, revisions, options ) {
+		var settings = historySettings( options );
+		var tracked = timeline.tracked;
+		var newer = timeline.newer;
+		var steps = timeline.steps.slice();
+
+		revisions.forEach( function ( revision ) {
+			var match = findCounterpart( revision.items, tracked, settings, newer );
+
+			if ( match ) {
+				tracked = match;
+			}
+			newer = revision.items;
+			steps.push( { revision: revision, match: match } );
+		} );
+
+		return { target: timeline.target, tracked: tracked, newer: newer, steps: steps };
+	}
+
+	/**
+	 * What differs between two versions of a block.
+	 *
+	 * @param {{text: string, block: Object}|null} before   Older version.
+	 * @param {{text: string, block: Object}|null} after    Newer version.
+	 * @param {function(string): string}           [roleFor] Role of an attribute. Content attributes are left out when the text changed, because the text already shows them.
+	 * @return {{text: boolean, attributes: string[], inner: {added: number, removed: number, changed: number}|null}|null} Null when either version is missing.
+	 */
+	function describeChange( before, after, roleFor ) {
+		var textChanged;
+		var names;
+		var inner = null;
+		var counts;
+
+		if ( ! before || ! after ) {
+			return null;
+		}
+
+		textChanged = before.text !== after.text;
+		names = Object.keys( Object.assign( {}, before.block.attributes, after.block.attributes ) ).filter( function ( key ) {
+			var a = JSON.stringify( stable( ( before.block.attributes || {} )[ key ] ) );
+			var b = JSON.stringify( stable( ( after.block.attributes || {} )[ key ] ) );
+
+			return a !== b && ! ( textChanged && roleFor && 'content' === roleFor( key ) );
+		} );
+
+		if ( ( before.block.innerBlocks || [] ).length || ( after.block.innerBlocks || [] ).length ) {
+			counts = summarizeDiff( diffTree( after.block, before.block ) );
+			inner = counts.added || counts.removed || counts.changed ? counts : null;
+		}
+
+		return { text: textChanged, attributes: names, inner: inner };
+	}
+
+	/**
+	 * The versions a block went through, newest first.
+	 *
+	 * Each entry is one change: `first` (the oldest version found), `added`
+	 * (the block appears), `edited` (text, settings or inner blocks changed),
+	 * `removed` (the block is gone from that save on) or `readded` (it comes
+	 * back after being gone). The block as it is in the editor now comes first
+	 * when it differs from the newest save, with `revisionId` "current".
+	 * Saves that did not change the block are counted in `revisionIds`, not listed.
+	 *
+	 * @param {{target: Object, steps: Array}} timeline Result of advanceTimeline().
+	 * @param {function(string): string}       [roleFor] Role of an attribute, for describeChange().
+	 * @return {Array<{type: string, revisionId: *, revisionIds: Array<*>, when: string, author: string, autosave: boolean, item: Object|null, previous: Object|null, change: Object|null}>} Entries.
+	 */
+	function timelineEntries( timeline, roleFor ) {
+		var entries = [];
+		var present = null;
+		var lastSeen = null;
+
+		timeline.steps
+			.slice()
+			.reverse()
+			.forEach( function ( step, index ) {
+				var revision = step.revision;
+				var base = { revisionId: revision.id, revisionIds: [ revision.id ], when: revision.when || '', author: revision.author || '', autosave: !! revision.autosave };
+
+				if ( step.match ) {
+					if ( ! present ) {
+						entries.push( Object.assign( base, { type: lastSeen ? 'readded' : 0 === index ? 'first' : 'added', item: step.match, previous: lastSeen, change: describeChange( lastSeen, step.match, roleFor ) } ) );
+					} else if ( present.print !== step.match.print ) {
+						entries.push( Object.assign( base, { type: 'edited', item: step.match, previous: present, change: describeChange( present, step.match, roleFor ) } ) );
+					} else {
+						entries[ entries.length - 1 ].revisionIds.push( revision.id );
+					}
+					present = step.match;
+					lastSeen = step.match;
+				} else if ( present ) {
+					entries.push( Object.assign( base, { type: 'removed', item: null, previous: present, change: null } ) );
+					present = null;
+				}
+			} );
+
+		if ( ! present || present.print !== timeline.target.print ) {
+			entries.push( {
+				type: present ? 'edited' : lastSeen ? 'readded' : 'added',
+				revisionId: 'current',
+				revisionIds: [],
+				when: '',
+				author: '',
+				autosave: false,
+				item: timeline.target,
+				previous: present || lastSeen,
+				change: describeChange( present || lastSeen, timeline.target, roleFor ),
+			} );
+		}
+
+		return entries.reverse();
+	}
+
+	/**
+	 * Every value of the attributes that hold an HTML id (such as a block's anchor), in some blocks and what is inside them.
+	 *
+	 * @param {Object[]}                      blocks     Blocks.
+	 * @param {function(string): string[]}    anchorKeys Attribute names that hold an HTML id, for a block type. Default `anchor`.
+	 * @return {Set<string>} Ids in use.
+	 */
+	function collectAnchors( blocks, anchorKeys ) {
+		var found = new Set();
+		var keysFor = anchorKeys || defaultAnchorKeys;
+
+		flatten( blocks ).forEach( function ( item ) {
+			keysFor( item.block.name ).forEach( function ( key ) {
+				var value = ( item.block.attributes || {} )[ key ];
+
+				if ( 'string' === typeof value && value ) {
+					found.add( value );
+				}
+			} );
+		} );
+
+		return found;
+	}
+
+	function defaultAnchorKeys() {
+		return [ 'anchor' ];
+	}
+
+	/**
+	 * A copy of a block with its HTML ids made unique, so inserting it next to the original does not repeat an anchor.
+	 *
+	 * An id already in `taken` gets "-copy", then "-copy-2" and so on. The ids
+	 * of the copy are added to `taken`, so two copies in a row stay apart too.
+	 * The block given is not changed.
+	 *
+	 * @param {{name: string, attributes: Object, innerBlocks: Array}} block      Block, with its inner blocks.
+	 * @param {Set<string>}                                           taken      Ids already in the post. Changed.
+	 * @param {function(string): string[]}                            [anchorKeys] Attribute names that hold an HTML id, for a block type. Default `anchor`.
+	 * @return {{name: string, attributes: Object, innerBlocks: Array}} Copy.
+	 */
+	function uniqueAnchors( block, taken, anchorKeys ) {
+		var keysFor = anchorKeys || defaultAnchorKeys;
+		var attributes = Object.assign( {}, block.attributes );
+
+		keysFor( block.name ).forEach( function ( key ) {
+			var value = attributes[ key ];
+			var candidate;
+			var n = 1;
+
+			if ( 'string' !== typeof value || ! value ) {
+				return;
+			}
+			candidate = value;
+			while ( taken.has( candidate ) ) {
+				candidate = value + '-copy' + ( n > 1 ? '-' + n : '' );
+				n++;
+			}
+			taken.add( candidate );
+			attributes[ key ] = candidate;
+		} );
+
+		return Object.assign( {}, block, {
+			attributes: attributes,
+			innerBlocks: ( block.innerBlocks || [] ).map( function ( inner ) {
+				return uniqueAnchors( inner, taken, keysFor );
+			} ),
+		} );
+	}
+
 	return {
 		textFromMarkup: textFromMarkup,
 		similarity: similarity,
@@ -825,5 +1126,12 @@
 		removedBlocks: removedBlocks,
 		placement: placement,
 		isAncestor: isAncestor,
+		findCounterpart: findCounterpart,
+		startTimeline: startTimeline,
+		advanceTimeline: advanceTimeline,
+		timelineEntries: timelineEntries,
+		describeChange: describeChange,
+		collectAnchors: collectAnchors,
+		uniqueAnchors: uniqueAnchors,
 	};
 } );

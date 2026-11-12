@@ -1,7 +1,7 @@
 /**
  * Axle Block Restore: adds "Restore from a revision…" to each block's menu,
- * "Restore blocks from a revision" to the editor's main menu, and four
- * commands to the command palette. Works in the post editor and the Site Editor.
+ * "Block history" to the same menu, "Restore blocks from a revision" to the
+ * editor's main menu, and five commands to the command palette. Works in the post editor and the Site Editor.
  */
 ( function ( wp, restore ) {
 	'use strict';
@@ -109,6 +109,15 @@
 							close();
 							open( { clientId: state.blockId } );
 						},
+					},
+					{
+						name: 'axle-block-restore/history-selected',
+						label: __( 'Show history of selected block', 'axle-block-restore' ),
+						icon: icon( 'clock' ),
+						callback: ( { close } ) => {
+							close();
+							open( { clientId: state.blockId, view: 'history' } );
+						},
 					} );
 				}
 
@@ -117,7 +126,7 @@
 				 *
 				 * Each entry is a command for `wp.commands`: name, label, icon and callback.
 				 *
-				 * @param {Object[]}    entries  Default: restore blocks, find text, show removed blocks, and (with a block selected) restore the selected block.
+				 * @param {Object[]}    entries  Default: restore blocks, find text, show removed blocks, and (with a block selected) restore the selected block and show its history.
 				 * @param {string|null} blockId  Client ID of the selected block, or null.
 				 */
 				return applyFilters( 'axleBlockRestore.commands', list, state.blockId );
@@ -163,6 +172,23 @@
 						},
 					},
 					__( 'Restore from a revision…', 'axle-block-restore' )
+				);
+			} ),
+			el( BlockSettingsMenuControls, null, ( fillProps ) => {
+				const ids = fillProps.selectedClientIds || [];
+				if ( 1 !== ids.length || ! canRestoreBlock( select, ids[ 0 ] ) ) {
+					return null;
+				}
+				return el(
+					MenuItem,
+					{
+						icon: 'clock',
+						onClick: () => {
+							setOpen( { clientId: ids[ 0 ], view: 'history' } );
+							fillProps.onClose();
+						},
+					},
+					__( 'Block history', 'axle-block-restore' )
 				);
 			} ),
 			open && el( restore.RestoreModal, { clientId: open.clientId, focusSearch: !! open.focusSearch, view: open.view || 'revisions', onClose: () => setOpen( null ) } )
