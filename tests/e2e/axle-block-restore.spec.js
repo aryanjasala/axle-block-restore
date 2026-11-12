@@ -86,7 +86,7 @@ test.describe( 'Axle Block Restore', () => {
 		const content = async () => ( await rest( 'GET', `/wp/v2/posts/${ postId }?context=edit` ) ).body.content.raw;
 
 		const listed = await rest( 'GET', '/wp-abilities/v1/abilities?category=axle-block-restore' );
-		expect( listed.body.map( ( ability ) => ability.name ).sort() ).toEqual( [ 'axle-block-restore/find-deleted', 'axle-block-restore/find-text', 'axle-block-restore/list-revisions', 'axle-block-restore/restore-block' ] );
+		expect( listed.body.map( ( ability ) => ability.name ).sort() ).toEqual( [ 'axle-block-restore/block-history', 'axle-block-restore/find-deleted', 'axle-block-restore/find-text', 'axle-block-restore/list-revisions', 'axle-block-restore/restore-block' ] );
 		// MCP clients only list abilities marked public.
 		expect( JSON.parse( wpEval( `echo wp_json_encode( array_values( array_filter( array_map( function ( $ability ) { $meta = $ability->get_meta(); return ( ! empty( $meta['public'] ) && ! empty( $meta['mcp']['public'] ) ) ? '' : $ability->get_name(); }, wp_get_abilities() ), function ( $name ) { return 0 === strpos( $name, 'axle-block-restore/' ); } ) ) );` ) ) ).toEqual( [] );
 

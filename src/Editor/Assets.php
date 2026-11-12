@@ -66,6 +66,7 @@ final class Assets implements Service {
 			$url . 'js/components.js',
 			array(
 				'axle-block-restore-matching',
+				'wp-a11y',
 				'wp-api-fetch',
 				'wp-block-editor',
 				'wp-blocks',

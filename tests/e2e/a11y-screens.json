@@ -376,6 +376,168 @@
           "--force"
         ]
       ]
+    },
+    {
+      "name": "Block history, with the versions of a block",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Pricing",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>Our basic plan costs ten dollars a month and includes every feature.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>Our basic plan costs twelve dollars a month and includes every feature.</p><!-- /wp:paragraph -->"
+        ]
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "evaluate": "window.wp.data.dispatch( 'core/block-editor' ).selectBlock( window.wp.data.select( 'core/block-editor' ).getBlocks()[ 0 ].clientId )"
+        },
+        {
+          "click": "role=toolbar[name=/Block tools/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Block history/i]"
+        },
+        {
+          "waitFor": ".abr-modal .abr-timeline__item"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ]
+      ]
+    },
+    {
+      "name": "Block history, with a version previewed and the other ways to restore opened",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Pricing",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>Our basic plan costs ten dollars a month and includes every feature.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>Our basic plan costs twelve dollars a month and includes every feature.</p><!-- /wp:paragraph -->"
+        ]
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "evaluate": "window.wp.data.dispatch( 'core/block-editor' ).selectBlock( window.wp.data.select( 'core/block-editor' ).getBlocks()[ 0 ].clientId )"
+        },
+        {
+          "click": "role=toolbar[name=/Block tools/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Block history/i]"
+        },
+        {
+          "waitFor": ".abr-modal .abr-timeline__item"
+        },
+        {
+          "click": ".abr-timeline__item >> nth=1 >> role=button[name=/More ways to restore/i]"
+        },
+        {
+          "click": ".abr-timeline__item >> nth=1 >> role=button[name=/Preview/i]"
+        },
+        {
+          "waitFor": ".abr-card__preview"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ]
+      ]
+    },
+    {
+      "name": "Block history, a block with no earlier version",
+      "setup": [
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Pricing",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>Only this paragraph exists.</p><!-- /wp:paragraph -->\n\n<!-- wp:paragraph --><p>And a second one, added later.</p><!-- /wp:paragraph -->"
+        ]
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "evaluate": "window.wp.data.dispatch( 'core/block-editor' ).selectBlock( window.wp.data.select( 'core/block-editor' ).getBlocks()[ 0 ].clientId )"
+        },
+        {
+          "click": "role=toolbar[name=/Block tools/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Block history/i]"
+        },
+        {
+          "waitFor": ".abr-modal .components-notice"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ]
+      ]
     }
   ],
   "skip": {}

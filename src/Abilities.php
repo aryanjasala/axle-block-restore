@@ -131,6 +131,73 @@ final class Abilities implements Service {
 		);
 
 		$this->ability(
+			'block-history',
+			__( 'Get the history of one block', 'axle-block-restore' ),
+			__( 'Every version one block had in the revisions of a post, newest first: who changed it, when, what the text was before, and whether it was removed and added back. Name the block by its path in the post as it is now.', 'axle-block-restore' ),
+			array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'post_id'   => $post_id,
+					'path'      => $path,
+					'revisions' => array(
+						'type'        => 'integer',
+						'minimum'     => 1,
+						'maximum'     => $this->max_history_revisions(),
+						'default'     => 100,
+						'description' => __( 'How many of the newest revisions to look through.', 'axle-block-restore' ),
+					),
+				),
+				'required'             => array( 'post_id', 'path' ),
+				'additionalProperties' => false,
+			),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'post_id'           => array( 'type' => 'integer' ),
+					'path'              => $path,
+					'name'              => array( 'type' => 'string' ),
+					'revisions_checked' => array( 'type' => 'integer' ),
+					'entries'           => array(
+						'type'  => 'array',
+						'items' => array(
+							'type'       => 'object',
+							'properties' => array(
+								'type'               => array(
+									'type'        => 'string',
+									'enum'        => array( 'first', 'added', 'edited', 'removed', 'readded' ),
+									'description' => 'first: the oldest version found. added: the block appears. edited: it changed. removed: it is gone from this save on. readded: it came back.',
+								),
+								'revision_id'        => array( 'type' => 'integer' ),
+								'current'            => array(
+									'type'        => 'boolean',
+									'description' => 'True for the version in the post now when it is newer than the newest revision.',
+								),
+								'date'               => array( 'type' => 'string' ),
+								'author'             => array( 'type' => 'string' ),
+								'autosave'           => array( 'type' => 'boolean' ),
+								'path'               => $path,
+								'text'               => array( 'type' => 'string' ),
+								'previous_text'      => array( 'type' => 'string' ),
+								'text_changed'       => array( 'type' => 'boolean' ),
+								'attributes_changed' => array(
+									'type'  => 'array',
+									'items' => array( 'type' => 'string' ),
+								),
+								'inner_changed'      => array( 'type' => 'boolean' ),
+								'saves'              => array(
+									'type'        => 'integer',
+									'description' => 'How many saves kept this version.',
+								),
+							),
+						),
+					),
+				),
+			),
+			array( $this, 'block_history' ),
+			$read_only
+		);
+
+		$this->ability(
 			'find-deleted',
 			__( 'Find deleted blocks', 'axle-block-restore' ),
 			__( 'Blocks whose text is in an old revision but no longer in the post, newest revision first. Each comes with the revision and path to pass to restore-block.', 'axle-block-restore' ),
@@ -246,6 +313,72 @@ final class Abilities implements Service {
 		}
 
 		return $items;
+	}
+
+	/**
+	 * Ability: the versions one block had.
+	 *
+	 * @param array|null $input Ability input.
+	 * @return array|\WP_Error
+	 */
+	public function block_history( $input = null ) {
+		$input   = (array) $input;
+		$post_id = (int) $input['post_id'];
+		$post    = get_post( $post_id );
+		$path    = array_map( 'intval', (array) $input['path'] );
+
+		if ( ! $post ) {
+			return new \WP_Error( 'axle_block_restore_post', __( 'That post does not exist.', 'axle-block-restore' ) );
+		}
+
+		$revisions = array();
+		foreach ( $this->revisions( $post_id, (int) ( $input['revisions'] ?? 100 ), $this->max_history_revisions() ) as $revision ) {
+			$author      = get_userdata( (int) $revision->post_author );
+			$revisions[] = array(
+				'id'       => (int) $revision->ID,
+				'date'     => gmdate( 'c', (int) strtotime( $revision->post_date_gmt . ' UTC' ) ),
+				'author'   => $author ? $author->display_name : '',
+				'autosave' => false !== wp_is_post_autosave( $revision ),
+				'blocks'   => parse_blocks( $revision->post_content ),
+			);
+		}
+
+		/**
+		 * Filters how alike two versions of a block must be for the block history to follow it from one revision to the next.
+		 *
+		 * @param array $settings `similarity`: the share of words two versions share (default 0.5). `position_similarity`: the share needed when the block is the same type at the same place (default 0.2).
+		 * @param int   $post_id  Post.
+		 */
+		$settings = (array) apply_filters(
+			'axle_block_restore_history_similarity',
+			array(
+				'similarity'          => Timeline::SIMILARITY,
+				'position_similarity' => Timeline::POSITION_SIMILARITY,
+			),
+			$post_id
+		);
+
+		$history = Timeline::build( parse_blocks( $post->post_content ), $path, $revisions, $settings );
+		if ( null === $history ) {
+			return new \WP_Error( 'axle_block_restore_path', __( 'The post has no block at this path.', 'axle-block-restore' ) );
+		}
+
+		/**
+		 * Fires after the history of a block was read through the abilities or WP-CLI.
+		 *
+		 * @param int   $post_id Post.
+		 * @param int[] $path    Position of the block in the post.
+		 * @param array $history The block name, revisions looked through and entries.
+		 */
+		do_action( 'axle_block_restore_history_read', $post_id, $path, $history );
+
+		return array_merge(
+			array(
+				'post_id' => $post_id,
+				'path'    => $path,
+			),
+			$history
+		);
 	}
 
 	/**
@@ -371,7 +504,7 @@ final class Abilities implements Service {
 	}
 
 	/**
-	 * Permission: editing the post, in a post type that has Axle Block Restore.
+	 * Permission: editing this post, in a post type that has Axle Block Restore, with the capability the editor asks for.
 	 *
 	 * @param array|null $input Ability input.
 	 * @return bool
@@ -379,7 +512,8 @@ final class Abilities implements Service {
 	public function can_edit( $input = null ): bool {
 		$post = get_post( (int) ( ( (array) $input )['post_id'] ?? 0 ) );
 
-		return $post && in_array( $post->post_type, Plugin::post_types(), true ) && current_user_can( 'edit_post', $post->ID );
+		// The same capability the editor asks for, so a site that narrowed the filter narrows the abilities too, and edit_post for this post.
+		return $post && in_array( $post->post_type, Plugin::post_types(), true ) && current_user_can( Plugin::capability( $post->post_type ) ) && current_user_can( 'edit_post', $post->ID );
 	}
 
 	/**
@@ -397,18 +531,33 @@ final class Abilities implements Service {
 	}
 
 	/**
+	 * Most revisions the block history may look through.
+	 *
+	 * @return int
+	 */
+	private function max_history_revisions(): int {
+		/**
+		 * Filters how many revisions the block history ability and command may look through at most.
+		 *
+		 * @param int $max Default 200.
+		 */
+		return max( 1, (int) apply_filters( 'axle_block_restore_history_max_revisions', 200 ) );
+	}
+
+	/**
 	 * Revisions of a post, newest first.
 	 *
 	 * @param int $post_id Post.
 	 * @param int $limit   How many.
+	 * @param int $max     The most that may be asked for. Default the find abilities' limit.
 	 * @return \WP_Post[]
 	 */
-	private function revisions( int $post_id, int $limit ): array {
+	private function revisions( int $post_id, int $limit, int $max = 0 ): array {
 		return array_values(
 			wp_get_post_revisions(
 				$post_id,
 				array(
-					'posts_per_page' => max( 1, min( $this->max_revisions(), $limit ) ),
+					'posts_per_page' => max( 1, min( $max > 0 ? $max : $this->max_revisions(), $limit ) ),
 					'orderby'        => 'date ID',
 					'order'          => 'DESC',
 				)

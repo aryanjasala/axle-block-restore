@@ -102,4 +102,15 @@ test.describe( 'Screenshots', () => {
 		await expect( card.locator( '.abr-inner__item' ).first() ).toBeVisible();
 		await shot( page, 5 );
 	} );
+
+	test( '6: the history of one block', async ( { page } ) => {
+		await openEditor( page, postId );
+		const clientId = await page.evaluate( () => window.wp.data.select( 'core/block-editor' ).getBlocks()[ 2 ].clientId );
+		await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
+		await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
+		await page.getByRole( 'menuitem', { name: 'Block history' } ).click();
+		await expect( page.locator( '.abr-timeline__item' ).first() ).toBeVisible();
+		await expect( page.locator( '.abr-timeline__item .abr-diff' ).first() ).toBeVisible();
+		await shot( page, 6 );
+	} );
 } );
