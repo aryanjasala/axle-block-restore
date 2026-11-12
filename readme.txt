@@ -70,6 +70,8 @@ Free and open source under the GPL. No pro version, no upsells, no ads in wp-adm
 
 **Try it before you install.** [try.axlewp.com/axle-block-restore](https://try.axlewp.com/axle-block-restore) opens a private WordPress in your browser with this plugin and some demo content.
 
+**Every hook** is in the [guide on axlewp.com](https://axlewp.com/docs/axle-block-restore/).
+
 == Frequently Asked Questions ==
 
 = How does it find "the same block" in an old revision? =
