@@ -48,6 +48,8 @@ final class DeepLinkTest extends TestCase {
 
 	public function test_other_addresses_are_left_alone(): void {
 		$this->assertNull( DeepLink::redirect_url( array( 'post' => '12', 'action' => 'edit', 'revision' => '345' ) ) );
+		$this->assertNull( DeepLink::redirect_url( array( 'post' => '12', 'action' => 'edit', 'revision' => '345', 'path' => '2' ) ) );
+		$this->assertNull( DeepLink::redirect_url( array( 'post' => '12', 'axle-block-restore' => 'other', 'revision' => '345' ) ) );
 		$this->assertNull( DeepLink::redirect_url( array( 'axle-block-restore' => 'history', 'axle-revision' => '345' ) ) );
 		$this->assertNull( DeepLink::redirect_url( array( 'axle-block-restore' => 'history', 'path' => '2' ) ) );
 	}

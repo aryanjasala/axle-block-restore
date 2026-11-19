@@ -121,36 +121,6 @@ final class AutosavesTest extends TestCase {
 		$this->assertSame( 9, $items[0]['author_id'] );
 	}
 
-	public function test_a_revision_response_loses_the_autosave_text_and_owner_for_somebody_who_may_not_see_it(): void {
-		Functions\when( 'wp_is_post_autosave' )->justReturn( 7 );
-		$this->user_can( array( 'edit_posts', 'edit_post' ) );
-		$response = new \WP_REST_Response(
-			array(
-				'author'                     => 9,
-				'content'                    => array( 'raw' => 'Maria unsaved' ),
-				'title'                      => array( 'raw' => 'Secret title' ),
-				'axle_block_restore_author'  => 'Maria',
-			)
-		);
-
-		$result = ( new Autosaves() )->hide_from_others( $response, $this->autosave( 9 ) )->get_data();
-
-		$this->assertSame( '', $result['content']['raw'] );
-		$this->assertSame( '', $result['title']['raw'] );
-		$this->assertSame( 0, $result['author'] );
-		$this->assertSame( '', $result['axle_block_restore_author'] );
-	}
-
-	public function test_a_revision_response_is_left_alone_when_the_gate_is_open(): void {
-		Functions\when( 'wp_is_post_autosave' )->justReturn( 7 );
-		$this->user_can( array( 'edit_posts', 'edit_post', 'edit_others_posts' ) );
-		$response = new \WP_REST_Response( array( 'content' => array( 'raw' => 'Maria unsaved' ) ) );
-
-		$result = ( new Autosaves() )->hide_from_others( $response, $this->autosave( 9 ) )->get_data();
-
-		$this->assertSame( 'Maria unsaved', $result['content']['raw'] );
-	}
-
 	public function test_the_ability_to_restore_refuses_an_autosave_the_person_may_not_see(): void {
 		Functions\when( 'wp_get_post_revision' )->justReturn( $this->autosave( 9 ) );
 		Functions\when( 'wp_is_post_autosave' )->justReturn( 7 );

@@ -21,7 +21,7 @@ There is no build step. The scripts use the `wp.*` globals WordPress already loa
 | `assets/js/components.js` | The restore window, built on `wp.components` and `wp.blockEditor`, and the lookup of which entity a block belongs to |
 | `assets/js/index.js` | The menu entries (`BlockSettingsMenuControls` for **Restore from a revision…** and **Block history**, `PluginMoreMenuItem`) and the command palette entries |
 | `src/DeepLink.php` | Renames `revision` to `axle-revision` on history links, so core's own revisions view does not open |
-| `src/Autosaves.php` | Who may see other people's autosaves, the list route, and the redaction of core's revision responses. One place decides, so the editor, the abilities and WP-CLI agree |
+| `src/Autosaves.php` | Who may see other people's autosaves, and the list route. One place decides, so the editor, the abilities and WP-CLI agree |
 | `src/Timeline.php` | The same block history in PHP, for the `block-history` ability and the `history` command. No database access, so it is unit tested without WordPress |
 
 The window uses core components only (`Modal`, `Card`, `PanelBody`, `Button`, `Notice`, `Spinner`, `Badge`). `assets/editor.css` holds layout and nothing else.
@@ -178,10 +178,9 @@ WordPress keeps one autosave per person per post, and only that person is told a
 
 An autosave is replaced the next time its author edits, so the window says so, and shows its age. It is not history, so **Block history** and **Removed blocks** leave it out. Your own autosave stays among the saved revisions, tagged **Autosave**.
 
-Who sees it: a person who may edit this post and other people's posts of its type (`edit_post` for the post, and the post type's `edit_others_posts`, changed with `axle_block_restore_autosaves_capability`). Everyone else gets no name, no text and no count:
+Who sees it: a person who may edit this post and other people's posts of its type (`edit_post` for the post, and the post type's `edit_others_posts`, changed with `axle_block_restore_autosaves_capability`). Everyone else gets no name, no text and no count from this plugin's window, route, abilities and WP-CLI (core's own revision routes are left as core has them):
 
 - The list route answers 403 with the answer it gives for a post that does not exist.
-- In core's revision responses, an autosave of somebody else loses its content, title, excerpt and author for a person without the capability. The `axle_block_restore_author` field is empty.
 - The abilities and WP-CLI list and restore from other people's autosaves only for people who may see them. WP-CLI runs as the shell, which sees them all.
 
 ## Insert below as a copy

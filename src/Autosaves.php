@@ -15,7 +15,7 @@ namespace AryanX\Axle\BlockRestore;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * The gate for other people's autosaves, and the REST route that lists them.
+ * The gate for other people's autosaves, and the REST route that lists them. Core's own routes are left as they are.
  */
 final class Autosaves implements Service {
 
@@ -26,8 +26,6 @@ final class Autosaves implements Service {
 	 */
 	public function register(): void {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
-		add_filter( 'rest_prepare_revision', array( $this, 'hide_from_others' ), 20, 2 );
-		add_filter( 'rest_prepare_autosave', array( $this, 'hide_from_others' ), 20, 2 );
 	}
 
 	/**
@@ -111,43 +109,6 @@ final class Autosaves implements Service {
 		}
 
 		return self::can_see_for_post( (int) $revision->post_parent );
-	}
-
-	/**
-	 * Blanks what a person may not see of somebody else's autosave in a revision response.
-	 *
-	 * Core's revision routes return every autosave to anyone who can edit the post.
-	 * Here the content, title, excerpt and author are removed for people without
-	 * the capability, so the response says nothing about the autosave's text or owner.
-	 *
-	 * @param mixed $response Revision response.
-	 * @param mixed $post     Revision.
-	 * @return mixed
-	 */
-	public function hide_from_others( $response, $post ) {
-		if ( ! $response instanceof \WP_REST_Response || ! $post instanceof \WP_Post || self::can_see( $post ) ) {
-			return $response;
-		}
-
-		$data = $response->get_data();
-		if ( ! is_array( $data ) ) {
-			return $response;
-		}
-
-		foreach ( array( 'content', 'title', 'excerpt' ) as $key ) {
-			if ( isset( $data[ $key ] ) ) {
-				$data[ $key ] = array_fill_keys( array_keys( (array) $data[ $key ] ), '' );
-			}
-		}
-		if ( isset( $data['author'] ) ) {
-			$data['author'] = 0;
-		}
-		if ( isset( $data[ Rest\RevisionAuthor::FIELD ] ) ) {
-			$data[ Rest\RevisionAuthor::FIELD ] = '';
-		}
-		$response->set_data( $data );
-
-		return $response;
 	}
 
 	/**

@@ -86,11 +86,6 @@ test.describe( 'Axle Block Restore: unsaved work of other people', () => {
 				const route = await call( `/axle-block-restore/v1/autosaves/${ mine }` );
 				expect( route.status ).toBe( 403 );
 				expect( route.text ).not.toContain( 'Maria' );
-				// Core's own list still has the row, but with the text, title and owner taken out.
-				const revisions = await call( `/wp/v2/posts/${ mine }/revisions?context=edit` );
-				expect( revisions.text ).not.toContain( 'Maria' );
-				expect( revisions.text ).not.toContain( 'proofing overnight' );
-
 				const modal = await openPostModal( page );
 				await expect( modal.getByRole( 'group', { name: 'Unsaved work from other people' } ) ).toHaveCount( 0 );
 				await expect( modal.getByText( 'Maria' ) ).toHaveCount( 0 );
