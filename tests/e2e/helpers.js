@@ -34,7 +34,7 @@ const blocksNow = ( page ) =>
 async function openPostModal( page ) {
 	await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 	await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
-	const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+	const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 	await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 	return modal;
 }
@@ -43,7 +43,7 @@ async function openBlockModal( page, clientId ) {
 	await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
 	await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
 	await page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ).click();
-	const modal = page.getByRole( 'dialog', { name: /^Restore this .* from a revision$/ } );
+	const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 	await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 	return modal;
 }

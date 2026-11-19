@@ -9,7 +9,7 @@ async function openHistory( page, clientId ) {
 	await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
 	await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
 	await page.getByRole( 'menuitem', { name: 'Block history' } ).click();
-	const modal = page.getByRole( 'dialog', { name: /^Restore this .* from a revision$/ } );
+	const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 	await expect( modal.getByRole( 'tab', { name: 'Block history' } ) ).toHaveAttribute( 'aria-selected', 'true' );
 	await expect( modal.locator( '.abr-timeline__item' ).first() ).toBeVisible();
 	return modal;
@@ -84,7 +84,7 @@ test.describe( 'Axle Block Restore: block history', () => {
 		await page.getByRole( 'combobox', { name: /Search commands/i } ).fill( 'Show history of selected block' );
 		await page.getByRole( 'option', { name: 'Show history of selected block' } ).click();
 
-		const modal = page.getByRole( 'dialog', { name: /^Restore this .* from a revision$/ } );
+		const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( modal.getByRole( 'tab', { name: 'Block history' } ) ).toHaveAttribute( 'aria-selected', 'true' );
 		await expect( modal.locator( '.abr-timeline__item' ) ).toHaveCount( 1 );
 		expect( await page.evaluate( () => window.robEntries ) ).toEqual( [ 'edited', 'first' ] );
@@ -196,7 +196,7 @@ test.describe( 'Axle Block Restore: insert below as a copy', () => {
 		await openEditor( page, postId );
 		await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 		await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
-		const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+		const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 		const before = await blocksNow( page );
 

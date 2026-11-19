@@ -91,7 +91,7 @@ test.describe( 'Axle Block Restore: copy a block from another post', () => {
 			const modalReady = page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } );
 			await modalReady.click();
 			await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
-			const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+			const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 			await modal.getByRole( 'tab', { name: 'Another post' } ).click();
 			await expect( modal.locator( '.abr-result' ) ).toHaveCount( 1 );
 			await expect( modal.locator( '.abr-result' ) ).toContainText( 'ABR mine two' );

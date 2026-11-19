@@ -81,6 +81,41 @@ final class Command {
 	}
 
 	/**
+	 * Lists the autosaves other people left on a post, newest first.
+	 *
+	 * An autosave is replaced the next time its author edits, so restore what you
+	 * need soon. Restore a block from one with `restore <post> <autosave-id> <path>`.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <post>
+	 * : Post ID.
+	 *
+	 * [--format=<format>]
+	 * : Output format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - count
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp axle-block-restore autosaves 42
+	 *
+	 * @param string[]             $args       Positional arguments.
+	 * @param array<string,string> $assoc_args Flags.
+	 */
+	public function autosaves( $args, $assoc_args ): void {
+		$items = $this->abilities->list_autosaves( array( 'post_id' => $this->post_id( $args[0] ) ) );
+		$this->print_items( $items, array( 'id', 'date', 'author', 'blocks' ), $assoc_args );
+	}
+
+	/**
 	 * Lists blocks that are in old revisions and no longer in the post.
 	 *
 	 * ## OPTIONS

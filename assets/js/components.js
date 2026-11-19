@@ -148,10 +148,10 @@
 	/**
 	 * Settings of the plugin, printed by PHP.
 	 *
-	 * @return {{postTypes: string[]}} Post types the current user can restore blocks in.
+	 * @return {{postTypes: string[], canSeeAutosaves: boolean, userId: number}} Post types the current user can restore blocks in, whether the user may see other people's autosaves, and who the user is.
 	 */
 	function config() {
-		return ( window.axleBlockRestore && window.axleBlockRestore.config ) || { postTypes: [] };
+		return ( window.axleBlockRestore && window.axleBlockRestore.config ) || { postTypes: [], canSeeAutosaves: false, userId: 0 };
 	}
 
 	/**
@@ -223,14 +223,23 @@
 	 * A copy of a block that is safe to put in the post: new client IDs, and no anchor the post already uses.
 	 *
 	 * An anchor that is taken gets "-copy" added (then "-copy-2"). When the copy
-	 * replaces a block, that block's own anchors count as free.
+	 * replaces a block, that block's own anchors count as free, and its Note
+	 * thread (`metadata.noteId`) stays on the new block. Any other copy loses the
+	 * Note link, as it would otherwise point at the original's thread.
 	 *
 	 * @param {Object}  block      Block from a revision, another post or the removed list.
 	 * @param {string} [replacing] Client ID of the block the copy takes the place of.
 	 * @return {Object} Block to insert.
 	 */
 	function freshCopy( block, replacing ) {
-		const copy = cloneBlock( block );
+		let copy = cloneBlock( matching.withoutNoteIds( block ) );
+
+		// A copy never shares the Note thread of the block it came from. A block that replaces another one keeps that block's thread.
+		const kept = replacing ? wp.data.select( 'core/block-editor' ).getBlock( replacing ) : null;
+		const keptNote = kept && kept.attributes && kept.attributes.metadata ? kept.attributes.metadata.noteId : undefined;
+		if ( undefined !== keptNote ) {
+			copy = Object.assign( {}, copy, { attributes: Object.assign( {}, copy.attributes, { metadata: Object.assign( {}, copy.attributes.metadata, { noteId: keptNote } ) } ) } );
+		}
 
 		/**
 		 * Filters whether a block put into the post from an old version gets unique anchors.
@@ -426,14 +435,16 @@
 					context: 'edit',
 					per_page: PER_PAGE,
 					page,
-					_fields: 'id,wp_id,modified,date_gmt,slug,content.raw,axle_block_restore_author',
+					_fields: 'id,wp_id,author,modified,date_gmt,slug,content.raw,axle_block_restore_author',
 				} ),
 			} )
 				.then( ( items ) => {
 					// A revision saved while the window is open shifts the pages, so skip ones already listed.
 					setRevisions( ( previous ) => {
 						const seen = new Set( previous.map( ( revision ) => revision.id ) );
-						return previous.concat( items.map( prepare ).filter( ( item ) => ! seen.has( item.id ) ) );
+						// Somebody else's autosave is unsaved work, not history. It is listed apart, and only for people who may see it.
+						const mine = ( item ) => ! isAutosave( item ) || undefined === item.author || Number( item.author ) === Number( config().userId );
+						return previous.concat( items.filter( mine ).map( prepare ).filter( ( item ) => ! seen.has( item.id ) ) );
 					} );
 					setHasMore( items.length === PER_PAGE );
 				} )
@@ -449,6 +460,44 @@
 		}, [ post.id, post.restBase, post.restNamespace, post.fromTheme, page, attempt ] );
 
 		return { revisions, loading, error, none, hasMore, loadMore: () => setPage( page + 1 ), retry: () => setAttempt( attempt + 1 ) };
+	}
+
+	/**
+	 * Other people's autosaves of a post: their unsaved work.
+	 *
+	 * Only asked for when the server says the person may see them. The server
+	 * checks again, per post, and answers with nothing otherwise.
+	 *
+	 * @param {Object} post Entity: post type and ID.
+	 * @return {Object[]} Prepared autosaves, newest first, each with `foreignAutosave: true`.
+	 */
+	function useAutosaves( post ) {
+		const [ items, setItems ] = useState( [] );
+		const allowed = !! config().canSeeAutosaves && config().postTypes.indexOf( post.postType ) !== -1 && Number( post.id ) > 0;
+
+		useEffect( () => {
+			if ( ! allowed ) {
+				return undefined;
+			}
+			let cancelled = false;
+			wp.apiFetch( { path: '/axle-block-restore/v1/autosaves/' + Number( post.id ) } ).then(
+				( found ) => {
+					if ( ! cancelled ) {
+						setItems( found.map( ( item ) => Object.assign( prepare( item ), { foreignAutosave: true } ) ) );
+					}
+				},
+				() => {
+					if ( ! cancelled ) {
+						setItems( [] );
+					}
+				}
+			);
+			return () => {
+				cancelled = true;
+			};
+		}, [ allowed, post.id ] );
+
+		return items;
 	}
 
 	/**
@@ -696,9 +745,9 @@
 				el(
 					'div',
 					{ className: 'abr-card__actions' },
-					actions,
+					el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'axle-block-restore' ) ),
 					canDiff && el( Button, { variant: 'tertiary', isPressed: 'diff' === view, onClick: () => toggle( 'diff' ) }, __( 'Show changes', 'axle-block-restore' ) ),
-					el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'axle-block-restore' ) )
+					actions
 				)
 			)
 		);
@@ -896,8 +945,15 @@
 	 * @param {Object} props Timeline entry, the block in the editor, date format and the restore callbacks.
 	 * @return {Element} Card.
 	 */
-	function HistoryEntry( { entry, target, format, onRestore, onInsertAfter, onCopy } ) {
+	function HistoryEntry( { entry, target, format, linked, onRestore, onInsertAfter, onCopy } ) {
 		const [ view, setView ] = useState( null );
+		const cardRef = useRef();
+		// The version a link pointed at is brought into view.
+		useEffect( () => {
+			if ( linked && cardRef.current && cardRef.current.scrollIntoView ) {
+				cardRef.current.scrollIntoView( { block: 'center' } );
+			}
+		}, [ linked ] );
 		const labels = {
 			first: __( 'Oldest version found', 'axle-block-restore' ),
 			added: __( 'Added', 'axle-block-restore' ),
@@ -941,7 +997,7 @@
 
 		return el(
 			Card,
-			{ className: 'abr-card abr-history__entry', size: 'small' },
+			{ className: 'abr-card abr-history__entry' + ( linked ? ' is-linked' : '' ), size: 'small', ref: cardRef },
 			el(
 				CardHeader,
 				null,
@@ -949,6 +1005,7 @@
 				el(
 					'span',
 					{ className: 'abr-card__badges' },
+					linked && el( Tone, { tone: 'info', state: 'linked' }, __( 'From your link', 'axle-block-restore' ) ),
 					isCurrent && el( Tone, { tone: STATE_TONES.current, state: 'current' }, __( 'Not saved yet', 'axle-block-restore' ) ),
 					same && el( Tone, { tone: 'good', state: 'same' }, __( 'Same as now', 'axle-block-restore' ) )
 				)
@@ -1012,13 +1069,47 @@
 					el(
 						'div',
 						{ className: 'abr-card__actions' },
+						el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'axle-block-restore' ) ),
 						! isCurrent && ! same && el( Button, { variant: 'primary', onClick: () => onRestore( 'replace', item.block ) }, __( 'Replace current block', 'axle-block-restore' ) ),
 						! isCurrent && ! same && el( Button, { variant: 'secondary', onClick: () => onInsertAfter( item.block ) }, __( 'Insert below as a copy', 'axle-block-restore' ) ),
-						! isCurrent && ! same && el( Button, { variant: 'tertiary', isPressed: 'more' === view, onClick: () => toggle( 'more' ) }, __( 'More ways to restore', 'axle-block-restore' ) ),
-						el( Button, { variant: 'tertiary', isPressed: 'preview' === view, onClick: () => toggle( 'preview' ) }, __( 'Preview', 'axle-block-restore' ) )
+						! isCurrent && ! same && el( Button, { variant: 'tertiary', isPressed: 'more' === view, onClick: () => toggle( 'more' ) }, __( 'More ways to restore', 'axle-block-restore' ) )
 					)
 			)
 		);
+	}
+
+	/**
+	 * The window's title: it names what the open tab shows.
+	 *
+	 * @param {string}      view   Open tab: revisions, history, removed or other.
+	 * @param {Object|null} target The block the window was opened for, described.
+	 * @return {string} Title.
+	 */
+	function modalTitle( view, target ) {
+		let title;
+		if ( 'history' === view && target ) {
+			/* translators: %s: block type, e.g. "Paragraph". */
+			title = sprintf( __( 'History of this %s', 'axle-block-restore' ), target.title );
+		} else if ( 'removed' === view ) {
+			title = __( 'Removed blocks', 'axle-block-restore' );
+		} else if ( 'other' === view ) {
+			title = __( 'Copy from another post', 'axle-block-restore' );
+		} else if ( target ) {
+			/* translators: %s: block type, e.g. "Paragraph". */
+			title = sprintf( __( 'Restore this %s from a revision', 'axle-block-restore' ), target.title );
+		} else {
+			title = __( 'Restore blocks from a revision', 'axle-block-restore' );
+		}
+
+		/**
+		 * Filters the title of the restore window.
+		 *
+		 * @param {string}      title  Default: names the open tab.
+		 * @param {string}      view   Open tab: revisions, history, removed or other.
+		 * @param {Object|null} target The block the window was opened for, or null.
+		 */
+		const filtered = applyFilters( 'axleBlockRestore.windowTitle', title, view, target );
+		return 'string' === typeof filtered && filtered ? filtered : title;
 	}
 
 	/**
@@ -1027,7 +1118,7 @@
 	 * @param {Object} props The block, the loaded revisions and their state, and the restore callbacks.
 	 * @return {Element} View.
 	 */
-	function BlockHistory( { target, blocks, revisions, loading, error, none, hasMore, loadMore, retry, noun, onRestore, onInsertAfter, onCopy } ) {
+	function BlockHistory( { target, blocks, revisions, loading, error, none, hasMore, loadMore, retry, noun, linkedRevision, onRestore, onInsertAfter, onCopy } ) {
 		const limit = useMemo( historyRevisions, [] );
 		const settings = useMemo( historySettings, [] );
 		const [ cap, setCap ] = useState( limit );
@@ -1080,6 +1171,14 @@
 			const filtered = applyFilters( 'axleBlockRestore.historyEntries', found, { clientId: target.block.clientId, revisionIds: looked.map( ( revision ) => revision.id ) } );
 			return Array.isArray( filtered ) ? filtered : found;
 		}, [ timeline ] ); // eslint-disable-line react-hooks/exhaustive-deps
+
+		// The entry a link names, so it is shown even when it is further down the list than the first page.
+		const linkedIndex = linkedRevision ? entries.findIndex( ( entry ) => entry.revisionIds && entry.revisionIds.indexOf( linkedRevision ) !== -1 ) : -1;
+		useEffect( () => {
+			if ( linkedIndex >= shown ) {
+				setShown( linkedIndex + 1 );
+			}
+		}, [ linkedIndex ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 		const finished = ! fetching && ! error && looked.length > 0;
 		useEffect( () => {
@@ -1145,7 +1244,7 @@
 					el(
 						'li',
 						{ key: entry.type + ':' + entry.revisionId + ':' + index, className: 'abr-timeline__item' },
-						el( HistoryEntry, { entry, target, format, onRestore, onInsertAfter, onCopy } )
+						el( HistoryEntry, { entry, target, format, linked: index === linkedIndex, onRestore, onInsertAfter, onCopy } )
 					)
 				)
 			),
@@ -1590,7 +1689,7 @@
 	 * @param {Object} props Selected block's client ID (or null for the whole entity), focusSearch, the view to open on ("revisions", "removed" or "other") and onClose.
 	 * @return {Element} Modal.
 	 */
-	function RestoreModal( { clientId, focusSearch, view: initialView, onClose } ) {
+	function RestoreModal( { clientId, focusSearch, view: initialView, link, onClose } ) {
 		const data = useSelect(
 			( select ) => {
 				const blockEditor = select( 'core/block-editor' );
@@ -1647,7 +1746,12 @@
 		const { replaceBlock, insertBlocks } = useDispatch( 'core/block-editor' );
 		const { createSuccessNotice, createErrorNotice, removeNotice } = useDispatch( 'core/notices' );
 		const { revisions, loading, error, none, hasMore, loadMore, retry } = useRevisions( data.post );
-		const [ selectedId, setSelectedId ] = useState( null );
+		const autosaves = useAutosaves( data.post );
+		// Unsaved work of other people comes first, then every saved revision. Only the "By revision" view lists the autosaves.
+		const listed = useMemo( () => autosaves.concat( revisions ), [ autosaves, revisions ] );
+		const linkedRevision = link && link.revision ? link.revision : 0;
+		const [ linkMissing, setLinkMissing ] = useState( !! ( link && link.missing ) );
+		const [ selectedId, setSelectedId ] = useState( linkedRevision || null );
 		const [ view, setView ] = useState( [ 'removed', 'other' ].indexOf( initialView ) !== -1 || ( 'history' === initialView && clientId ) ? initialView : 'revisions' );
 		const [ input, setInput ] = useState( '' );
 		const [ query, setQuery ] = useState( '' );
@@ -1695,14 +1799,15 @@
 		// Differences per revision, against the editor as it is now.
 		const differences = useMemo( () => {
 			const result = {};
-			revisions.forEach( ( revision ) => {
+			listed.forEach( ( revision ) => {
 				result[ revision.id ] = matching.classify( revision.top, current ).filter( ( status ) => 'same' !== status ).length + Math.max( 0, current.length - revision.top.length );
 			} );
 			return result;
-		}, [ revisions, current ] );
+		}, [ listed, current ] );
 
 		useEffect( () => {
 			if ( null === selectedId && revisions.length ) {
+				// Saved revisions first: an autosave is only selected when you pick it.
 				const firstDifferent = revisions.find( ( revision ) => differences[ revision.id ] > 0 );
 				setSelectedId( ( firstDifferent || revisions[ 0 ] ).id );
 			}
@@ -1710,19 +1815,32 @@
 
 		const revisionsById = useMemo( () => {
 			const map = {};
-			revisions.forEach( ( revision ) => {
+			listed.forEach( ( revision ) => {
 				map[ revision.id ] = revision;
 			} );
 			return map;
-		}, [ revisions ] );
+		}, [ listed ] );
+
+		// A link names a revision that may be older than the first page: keep loading until it turns up or there is no more.
+		useEffect( () => {
+			if ( ! linkedRevision || revisionsById[ linkedRevision ] || loading ) {
+				return;
+			}
+			if ( hasMore ) {
+				loadMore();
+			} else if ( revisions.length || error || none ) {
+				setLinkMissing( true );
+				setSelectedId( null );
+			}
+		}, [ linkedRevision, revisionsById, loading, hasMore ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 		const results = useMemo( () => {
 			const found = matching.search(
-				revisions.map( ( revision ) => ( { id: revision.id, items: revision.all } ) ),
+				listed.map( ( revision ) => ( { id: revision.id, items: revision.all } ) ),
 				query
 			);
 			return target ? found.filter( ( result ) => result.name === target.name ) : found;
-		}, [ revisions, query, target ] );
+		}, [ listed, query, target ] );
 
 		const dateFormat = getDateSettings().formats.datetime;
 		const labelFor = ( revision ) => {
@@ -1842,18 +1960,18 @@
 
 		// Arrow keys, Home and End move both the selection and the focus (roving tabindex).
 		const moveSelection = ( event ) => {
-			const index = revisions.findIndex( ( revision ) => revision.id === selectedId );
+			const index = listed.findIndex( ( revision ) => revision.id === selectedId );
 			const targets = {
 				ArrowDown: index + 1,
 				ArrowUp: index - 1,
 				Home: 0,
-				End: revisions.length - 1,
+				End: listed.length - 1,
 			};
 			if ( ! ( event.key in targets ) ) {
 				return;
 			}
 			event.preventDefault();
-			const next = revisions[ targets[ event.key ] ];
+			const next = listed[ targets[ event.key ] ];
 			if ( next ) {
 				setSelectedId( next.id );
 				setFocusText( '' );
@@ -1951,6 +2069,42 @@
 			} );
 		}
 
+		// One row of the revision list: a saved revision, your own autosave, or somebody else's unsaved work.
+		const renderOption = ( revision ) => {
+			const own = isAutosave( revision ) && ! revision.foreignAutosave;
+			const count = differences[ revision.id ];
+			const who = revision.foreignAutosave ? revision.axle_block_restore_author || __( 'Someone', 'axle-block-restore' ) : revision.axle_block_restore_author;
+
+			return el(
+				Button,
+				{
+					key: revision.id,
+					id: 'abr-revision-' + revision.id,
+					role: 'option',
+					'aria-selected': revision.id === selectedId,
+					// Only the selected option is in the tab order; the arrow keys reach the rest.
+					tabIndex: revision.id === selectedId ? 0 : -1,
+					// Core's pressed look, as a class: aria-pressed is not allowed on an option.
+					className: 'abr-revision' + ( revision.id === selectedId ? ' is-selected is-pressed' : '' ),
+					onClick: () => {
+						setSelectedId( revision.id );
+						setFocusText( '' );
+					},
+				},
+				el( 'span', { className: 'abr-revision__date' }, el( When, { value: revision.when, format: dateFormat } ), who && ' · ' + who ),
+				el(
+					'span',
+					{ className: 'abr-revision__meta' },
+					revision.foreignAutosave && el( 'span', { className: 'abr-tag' }, __( 'Unsaved', 'axle-block-restore' ) ),
+					own && el( 'span', { className: 'abr-tag' }, __( 'Autosave', 'axle-block-restore' ) ),
+					count
+						? /* translators: %d: number of differences. */
+						  sprintf( _n( '%d difference', '%d differences', count, 'axle-block-restore' ), count )
+						: __( 'Same as now', 'axle-block-restore' )
+				)
+			);
+		};
+
 		const searching = query.trim().length >= 2;
 		const copyTypes = useMemo( copyPostTypes, [] );
 		const tabs = [
@@ -1975,6 +2129,7 @@
 					loadMore,
 					retry,
 					noun: data.post.noun,
+					linkedRevision,
 					onRestore: restoreBlock,
 					onInsertAfter: insertBelowBlock,
 					onCopy: copyBlock,
@@ -1999,14 +2154,19 @@
 		return el(
 			Modal,
 			{
-				title: target
-					/* translators: %s: block type, e.g. "Paragraph". */
-					? sprintf( __( 'Restore this %s from a revision', 'axle-block-restore' ), target.title )
-					: __( 'Restore blocks from a revision', 'axle-block-restore' ),
+				title: modalTitle( view, target ),
 				onRequestClose: onClose,
 				size: 'large',
 				className: 'abr-modal',
 			},
+			linkMissing &&
+				el(
+					Notice,
+					{ status: 'info', onRemove: () => setLinkMissing( false ) },
+					link && link.missingBlock
+						? __( 'The block that link points to is not in this post any more. Here is the revision it names.', 'axle-block-restore' )
+						: __( 'That revision is not in this post. Here are its revisions.', 'axle-block-restore' )
+				),
 			el(
 				TabPanel,
 				{
@@ -2066,42 +2226,41 @@
 											'aria-label': __( 'Revisions', 'axle-block-restore' ),
 											onKeyDown: moveSelection,
 										},
-										revisions.map( ( revision ) => {
-											const isAutosave = revision.slug && revision.slug.indexOf( '-autosave-' ) !== -1;
-											const count = differences[ revision.id ];
-	
-											return el(
-												Button,
-												{
-													key: revision.id,
-													id: 'abr-revision-' + revision.id,
-													role: 'option',
-													'aria-selected': revision.id === selectedId,
-													// Only the selected option is in the tab order; the arrow keys reach the rest.
-													tabIndex: revision.id === selectedId ? 0 : -1,
-													// Core's pressed look, as a class: aria-pressed is not allowed on an option.
-													className: 'abr-revision' + ( revision.id === selectedId ? ' is-selected is-pressed' : '' ),
-													onClick: () => {
-														setSelectedId( revision.id );
-														setFocusText( '' );
-													},
-												},
-												el( 'span', { className: 'abr-revision__date' }, el( When, { value: revision.when, format: dateFormat } ), revision.axle_block_restore_author && ' · ' + revision.axle_block_restore_author ),
-												el(
-													'span',
-													{ className: 'abr-revision__meta' },
-													isAutosave && el( 'span', { className: 'abr-tag' }, __( 'Autosave', 'axle-block-restore' ) ),
-													count
-														/* translators: %d: number of differences. */
-														? sprintf( _n( '%d difference', '%d differences', count, 'axle-block-restore' ), count )
-														: __( 'Same as now', 'axle-block-restore' )
-												)
-											);
-										} ),
+										autosaves.length > 0 &&
+											el(
+												'div',
+												{ role: 'group', 'aria-label': __( 'Unsaved work from other people', 'axle-block-restore' ), className: 'abr-revisions__group' },
+												el( 'p', { className: 'abr-revisions__heading', 'aria-hidden': 'true' }, __( 'Unsaved work from other people', 'axle-block-restore' ) ),
+												autosaves.map( renderOption )
+											),
+										autosaves.length > 0
+											? el(
+													'div',
+													{ role: 'group', 'aria-label': __( 'Saved revisions', 'axle-block-restore' ), className: 'abr-revisions__group' },
+													el( 'p', { className: 'abr-revisions__heading', 'aria-hidden': 'true' }, __( 'Saved revisions', 'axle-block-restore' ) ),
+													revisions.map( renderOption )
+											  )
+											: revisions.map( renderOption ),
 										loading && el( 'p', { className: 'abr-loading', role: 'status', 'aria-busy': 'true' }, el( Spinner ), ' ', __( 'Loading revisions…', 'axle-block-restore' ) ),
 										hasMore && ! loading && el( Button, { variant: 'link', onClick: loadMore }, __( 'Load older revisions', 'axle-block-restore' ) )
 									),
-									el( 'div', { className: 'abr-blocks' }, body )
+									el(
+										'div',
+										{ className: 'abr-blocks' },
+										selected &&
+											selected.foreignAutosave &&
+											el(
+												Notice,
+												{ status: 'info', isDismissible: false, className: 'abr-autosave-note' },
+												sprintf(
+													/* translators: 1: name of the person, 2: how long ago, e.g. "5 minutes ago". */
+													__( 'This is unsaved work by %1$s, from %2$s. WordPress replaces it the next time that person edits, so take what you need now.', 'axle-block-restore' ),
+													selected.axle_block_restore_author || __( 'someone', 'axle-block-restore' ),
+													labelFor( selected )
+												)
+											),
+										body
+									)
 							  )
 					);
 				}
@@ -2109,8 +2268,69 @@
 		);
 	}
 
+	/**
+	 * Works out what a history link points at, in the post as it is now.
+	 *
+	 * With a revision, `path` is the block's position in that revision, and the matcher finds
+	 * the same block in the post now. Without one, `path` is the position in the post now.
+	 * An anchor or client ID names the block directly.
+	 *
+	 * @param {{revision: number, path: number[], anchor: string, clientId: string}} link From parseDeepLink().
+	 * @return {Promise<{clientId: (string|null), revision: number, missing: boolean, missingBlock: boolean}>} What to open.
+	 */
+	function resolveDeepLink( link ) {
+		const reader = wp.data.select( 'core/block-editor' );
+		const entity = resolveEntity( wp.data.select, null );
+		const blocks = reader.getBlocks();
+		const flat = matching.flatten( blocks );
+		const here = ( path ) => flat.find( ( item ) => item.path.join( '.' ) === path.join( '.' ) );
+		const wanted = !! ( link.clientId || link.anchor || link.path.length );
+		const result = ( found ) => ( {
+			clientId: found ? found.block.clientId : null,
+			revision: link.revision,
+			missing: wanted && ! found,
+			missingBlock: wanted && ! found,
+		} );
+		let found = null;
+
+		if ( link.clientId ) {
+			found = flat.find( ( item ) => item.block.clientId === link.clientId ) || null;
+		}
+		if ( ! found && link.anchor ) {
+			found = flat.find( ( item ) => item.block.attributes && item.block.attributes.anchor === link.anchor ) || null;
+		}
+		if ( found || ! link.path.length ) {
+			return Promise.resolve( result( found ) );
+		}
+		if ( ! link.revision ) {
+			return Promise.resolve( result( here( link.path ) || null ) );
+		}
+
+		return wp.data
+			.resolveSelect( 'core' )
+			.getPostType( entity.postType )
+			.then( ( postType ) =>
+				wp.apiFetch( {
+					path: addQueryArgs( `/${ ( postType && postType.rest_namespace ) || 'wp/v2' }/${ postType.rest_base }/${ entity.id }/revisions/${ link.revision }`, { context: 'edit', _fields: 'id,author,slug,content.raw' } ),
+				} )
+			)
+			.then( ( revision ) => {
+				const node = matching.blockAt( { innerBlocks: parse( ( revision.content && revision.content.raw ) || '' ) }, link.path );
+				if ( ! node ) {
+					return result( null );
+				}
+				const tracked = Object.assign( describe( node ), { path: link.path } );
+				const items = flat.map( ( item ) => Object.assign( describe( item.block ), { path: item.path } ) );
+				const counterpart = matching.findCounterpart( items, tracked, matching.historySettings( historySettings() ), [] );
+
+				return result( counterpart ? here( counterpart.path ) : null );
+			} )
+			.catch( () => result( null ) );
+	}
+
 	window.axleBlockRestore = window.axleBlockRestore || {};
 	window.axleBlockRestore.RestoreModal = RestoreModal;
+	window.axleBlockRestore.resolveDeepLink = resolveDeepLink;
 	window.axleBlockRestore.resolveEntity = resolveEntity;
 	window.axleBlockRestore.isSupported = isSupported;
 } )( window.wp, window.axleBlockRestore.matching );

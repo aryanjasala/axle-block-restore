@@ -131,6 +131,35 @@ final class Abilities implements Service {
 		);
 
 		$this->ability(
+			'list-autosaves',
+			__( 'List unsaved work of other people', 'axle-block-restore' ),
+			__( 'The autosaves other people left on a post, newest first, with who and when. An autosave is overwritten the next time that person edits, so restore what you need soon. Needs permission to edit other people\'s posts. Pass the id to restore-block as revision_id.', 'axle-block-restore' ),
+			array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'post_id' => $post_id,
+				),
+				'required'             => array( 'post_id' ),
+				'additionalProperties' => false,
+			),
+			array(
+				'type'  => 'array',
+				'items' => array(
+					'type'       => 'object',
+					'properties' => array(
+						'id'     => array( 'type' => 'integer' ),
+						'date'   => array( 'type' => 'string' ),
+						'author' => array( 'type' => 'string' ),
+						'blocks' => array( 'type' => 'integer' ),
+					),
+				),
+			),
+			array( $this, 'list_autosaves' ),
+			$read_only,
+			array( $this, 'can_see_autosaves' )
+		);
+
+		$this->ability(
 			'block-history',
 			__( 'Get the history of one block', 'axle-block-restore' ),
 			__( 'Every version one block had in the revisions of a post, newest first: who changed it, when, what the text was before, and whether it was removed and added back. Name the block by its path in the post as it is now.', 'axle-block-restore' ),
@@ -316,6 +345,36 @@ final class Abilities implements Service {
 	}
 
 	/**
+	 * Ability: the autosaves other people left on a post.
+	 *
+	 * @param array|null $input Ability input.
+	 * @return array[]
+	 */
+	public function list_autosaves( $input = null ): array {
+		$items = array();
+		foreach ( Autosaves::for_post( (int) ( (array) $input )['post_id'] ) as $autosave ) {
+			$items[] = array(
+				'id'     => (int) $autosave['id'],
+				'date'   => gmdate( 'c', (int) strtotime( $autosave['date_gmt'] . ' UTC' ) ),
+				'author' => (string) $autosave['author'],
+				'blocks' => count( $this->real_indexes( parse_blocks( (string) $autosave['content'] ) ) ),
+			);
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Permission for the autosave list: editing the post, and allowed to see other people's autosaves.
+	 *
+	 * @param array|null $input Ability input.
+	 * @return bool
+	 */
+	public function can_see_autosaves( $input = null ): bool {
+		return $this->can_edit( $input ) && Autosaves::can_see_for_post( (int) ( (array) $input )['post_id'] );
+	}
+
+	/**
 	 * Ability: the versions one block had.
 	 *
 	 * @param array|null $input Ability input.
@@ -433,7 +492,7 @@ final class Abilities implements Service {
 		$post        = get_post( $post_id );
 		$revision    = wp_get_post_revision( $revision_id );
 
-		if ( ! $post || ! $revision || (int) $revision->post_parent !== $post_id ) {
+		if ( ! $post || ! $revision || (int) $revision->post_parent !== $post_id || ! Autosaves::can_see( $revision ) ) {
 			return new \WP_Error( 'axle_block_restore_revision', __( 'That revision does not belong to this post.', 'axle-block-restore' ) );
 		}
 
@@ -513,7 +572,7 @@ final class Abilities implements Service {
 		$post = get_post( (int) ( ( (array) $input )['post_id'] ?? 0 ) );
 
 		// The same capability the editor asks for, so a site that narrowed the filter narrows the abilities too, and edit_post for this post.
-		return $post && in_array( $post->post_type, Plugin::post_types(), true ) && current_user_can( Plugin::capability( $post->post_type ) ) && current_user_can( 'edit_post', $post->ID );
+		return $post && Plugin::is_enabled( $post->post_type ) && current_user_can( Plugin::capability( $post->post_type ) ) && current_user_can( 'edit_post', $post->ID );
 	}
 
 	/**
@@ -554,13 +613,16 @@ final class Abilities implements Service {
 	 */
 	private function revisions( int $post_id, int $limit, int $max = 0 ): array {
 		return array_values(
-			wp_get_post_revisions(
-				$post_id,
-				array(
-					'posts_per_page' => max( 1, min( $max > 0 ? $max : $this->max_revisions(), $limit ) ),
-					'orderby'        => 'date ID',
-					'order'          => 'DESC',
-				)
+			array_filter(
+				wp_get_post_revisions(
+					$post_id,
+					array(
+						'posts_per_page' => max( 1, min( $max > 0 ? $max : $this->max_revisions(), $limit ) ),
+						'orderby'        => 'date ID',
+						'order'          => 'DESC',
+					)
+				),
+				array( Autosaves::class, 'can_see' )
 			)
 		);
 	}
@@ -759,8 +821,9 @@ final class Abilities implements Service {
 	 * @param array    $output      Output schema.
 	 * @param callable $execute     Execute callback.
 	 * @param array    $annotations readonly, destructive, idempotent.
+	 * @param callable $permission  Permission callback. Default can_edit.
 	 */
-	private function ability( string $name, string $label, string $description, array $input, array $output, callable $execute, array $annotations ): void {
+	private function ability( string $name, string $label, string $description, array $input, array $output, callable $execute, array $annotations, ?callable $permission = null ): void {
 		wp_register_ability(
 			self::CATEGORY . '/' . $name,
 			array(
@@ -770,7 +833,7 @@ final class Abilities implements Service {
 				'input_schema'        => $input,
 				'output_schema'       => $output,
 				'execute_callback'    => $execute,
-				'permission_callback' => array( $this, 'can_edit' ),
+				'permission_callback' => $permission ? $permission : array( $this, 'can_edit' ),
 				'meta'                => array(
 					'annotations'  => $annotations,
 					'show_in_rest' => true,

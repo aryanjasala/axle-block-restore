@@ -36,7 +36,7 @@ final class Plugin {
 			self::$instance = new self();
 
 			$abilities = new Abilities();
-			$services  = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new PostSearch(), $abilities, new Revisions() );
+			$services  = array( new Assets(), new RevisionAuthor(), new RevisionContent(), new PostSearch(), new Autosaves(), new DeepLink(), $abilities, new Revisions() );
 			foreach ( $services as $service ) {
 				$service->register();
 			}
@@ -106,6 +106,24 @@ final class Plugin {
 				}
 			)
 		);
+	}
+
+	/**
+	 * Whether the abilities and the REST routes may work on a post type.
+	 *
+	 * The Site Editor's own types (templates, template parts, synced patterns) follow
+	 * `axle_block_restore_site_editor_post_types`, so taking one out of that list
+	 * takes it out of the abilities too, not only out of the Site Editor.
+	 *
+	 * @param string $post_type Post type.
+	 * @return bool
+	 */
+	public static function is_enabled( string $post_type ): bool {
+		if ( ! in_array( $post_type, self::post_types(), true ) ) {
+			return false;
+		}
+
+		return ! in_array( $post_type, array( 'wp_template', 'wp_template_part', 'wp_block' ), true ) || in_array( $post_type, self::site_editor_post_types(), true );
 	}
 
 	/**

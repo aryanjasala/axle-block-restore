@@ -20,6 +20,8 @@ There is no build step. The scripts use the `wp.*` globals WordPress already loa
 | `assets/js/matching.js` | Block text, similarity ranking, classification, word diff, revision search, attribute roles, partial restores, the inner block comparison, the removed blocks list with the position a block goes back to, the block history timeline, and unique anchors for copies. No WordPress dependency, so it is unit tested in Node |
 | `assets/js/components.js` | The restore window, built on `wp.components` and `wp.blockEditor`, and the lookup of which entity a block belongs to |
 | `assets/js/index.js` | The menu entries (`BlockSettingsMenuControls` for **Restore from a revision…** and **Block history**, `PluginMoreMenuItem`) and the command palette entries |
+| `src/DeepLink.php` | Renames `revision` to `axle-revision` on history links, so core's own revisions view does not open |
+| `src/Autosaves.php` | Who may see other people's autosaves, the list route, and the redaction of core's revision responses. One place decides, so the editor, the abilities and WP-CLI agree |
 | `src/Timeline.php` | The same block history in PHP, for the `block-history` ability and the `history` command. No database access, so it is unit tested without WordPress |
 
 The window uses core components only (`Modal`, `Card`, `PanelBody`, `Button`, `Notice`, `Spinner`, `Badge`). `assets/editor.css` holds layout and nothing else.
@@ -133,9 +135,60 @@ Blocks have no permanent ID, so the history follows the block from the newest re
 
 Revisions load 50 at a time and the timeline grows as each page arrives, with a spinner and a count of the revisions looked through. It stops at 200 revisions (`axleBlockRestore.historyRevisions`) and offers **Look further back**. Entries show 20 at a time.
 
+## Opening a block's history from a link
+
+Other Axle plugins link here: Activity Log, Wayback and the alert emails name a change, and this address opens the window on it. The address is a public contract, so its parameters do not change.
+
+```
+/wp-admin/post.php?post=12&action=edit&axle-block-restore=history&revision=345&path=2
+```
+
+| Parameter | Value | Means |
+| --- | --- | --- |
+| `post` | post ID | The post to open in the editor. Required, as for any edit link |
+| `action` | `edit` | Required, as for any edit link |
+| `axle-block-restore` | `history` | Turns the link on. Any other value does nothing |
+| `revision` | revision ID, optional | The revision to open on. WordPress 7.0 and later read `revision` in an edit address themselves and open their own revisions view, so on the way in the server renames it to `axle-revision` (a redirect, before the editor loads). Links may use either name; `axle-revision` skips the redirect. What follows applies to both: With a block, the entry for the save that kept that version is brought into view and marked **From your link**. Without a block, the **By revision** view opens with that revision selected |
+| `path` | block position, optional | Numbers separated by commas, counting real blocks from 0: `2` is the third top-level block, `2,0` the first block inside it. With `revision`, it is the position **in that revision**, and the block is found again in the post as it is now with the same matching as the history. Without `revision`, it is the position in the post now |
+| `anchor` | HTML anchor, optional | The block whose `anchor` attribute has this value, in the post now |
+| `clientId` | block client ID, optional | The block with this client ID in the open editor. It only lasts for one editor session, so it is for scripts, not for saved links |
+
+The block is looked up by `clientId`, then `anchor`, then `path`. The window opens on **Block history** for that block, and the block is selected in the editor. If the post has changed so much that the block is not in it any more, or no block is named, the window opens on **By revision** with the revision selected, and says so. A revision that is not in the post is said so too. Values that are not valid (a negative number, text in `path`) are dropped, and the window still opens.
+
+The window opens once the editor has its blocks. The editor drops the parameters from the address bar when it starts, so reloading does not open the window again. Only the post editor reads the link. It needs the same permission as the window: for someone who cannot restore in that post type, nothing happens. Turn it off with the `axleBlockRestore.deepLinkEnabled` filter.
+
+Build a link in PHP:
+
+```php
+$url = add_query_arg(
+	array(
+		'post'               => $post_id,
+		'action'             => 'edit',
+		'axle-block-restore' => 'history',
+		'axle-revision'      => $revision_id,
+		'path'               => implode( ',', $path ),
+	),
+	admin_url( 'post.php' )
+);
+```
+
+## Unsaved work of other people
+
+WordPress keeps one autosave per person per post, and only that person is told about it. If a colleague's browser died halfway through an edit, the text is in the database and nobody else can see it. In the post editor, the **By revision** list starts with **Unsaved work from other people**: one row for each person who left an autosave on this post, with their name, how long ago, and **Unsaved** next to the number of differences. Pick a row to see its blocks, matched to the post as it is now with the same matching as the saved revisions. Every restore works: **Replace current block**, **Insert below as a copy**, **Put it back**, the other ways to restore, and one block from inside a group. Nothing is saved until you update the post, and Ctrl+Z takes it back.
+
+An autosave is replaced the next time its author edits, so the window says so, and shows its age. It is not history, so **Block history** and **Removed blocks** leave it out. Your own autosave stays among the saved revisions, tagged **Autosave**.
+
+Who sees it: a person who may edit this post and other people's posts of its type (`edit_post` for the post, and the post type's `edit_others_posts`, changed with `axle_block_restore_autosaves_capability`). Everyone else gets no name, no text and no count:
+
+- The list route answers 403 with the answer it gives for a post that does not exist.
+- In core's revision responses, an autosave of somebody else loses its content, title, excerpt and author for a person without the capability. The `axle_block_restore_author` field is empty.
+- The abilities and WP-CLI list and restore from other people's autosaves only for people who may see them. WP-CLI runs as the shell, which sees them all.
+
 ## Insert below as a copy
 
 **Insert below as a copy** sits next to the restore button everywhere an old version of a block can be restored: the versions of one block, the blocks of a revision (below the block now at that place), one block inside a group that differs from the old one, and the block history. The copy has new client IDs, and an `anchor` (or any attribute saved as the markup's `id`) that another block in the post already uses gets `-copy` added, then `-copy-2`. When a version replaces a block, that block's own anchors count as free. `axleBlockRestore.uniqueAnchors` turns this off.
+
+A copy also loses its link to a Note (`metadata.noteId`), on the block and on every block inside it, because it would otherwise point at the original's thread. WordPress's own Duplicate keeps the link. A version that replaces a block keeps the Note thread of the block it replaces.
 
 After a restore the editor shows a notice with **Undo**, which is the editor's own undo, one step. After a copy the notice also has **Compare**, which selects the new block and scrolls to it. A snackbar can hold one action only, so a copy gets the editor's own notice and the other restores keep the snackbar with **Undo**.
 
@@ -146,6 +199,7 @@ The commands do what the abilities do, run as the shell user, and take paths as 
 | Command | Does |
 | --- | --- |
 | `wp axle-block-restore revisions <post> [--limit=20]` | Revisions of a post, newest first, with who saved each |
+| `wp axle-block-restore autosaves <post>` | Autosaves other people left on a post, newest first, with the ID to pass to `restore` as the revision |
 | `wp axle-block-restore find-deleted <post> [--revisions=20]` | Blocks in old revisions that are not in the post |
 | `wp axle-block-restore find-text <post> <text> [--revisions=20]` | Blocks in old revisions that contain the text, and whether each is still in the post |
 | `wp axle-block-restore history <post> <path> [--revisions=100]` | Every version of the block at `path` in the post as it is now |
@@ -173,6 +227,8 @@ Each revision and block carries a tone and a word. The tones are core's `Badge` 
 | Removed | error | In Block history: the block is gone from that save on |
 | Oldest version found | neutral | In Block history: the oldest revision looked through has the block |
 | Not saved yet | warning | In Block history: what is in the editor now, not in a revision |
+| Unsaved | neutral | In the revision list: an autosave somebody else left, not yet a saved revision |
+| From your link | info | In Block history: the version a history link named |
 
 Loading shows a spinner with "Loading revisions…", and in Block history with the number of revisions looked through. The results are announced to screen readers. A revision list that cannot load shows an error with **Try again**. A post without revisions, and a template that still comes from the theme, show a note that says why the list is empty.
 
@@ -189,6 +245,10 @@ PHP:
 | `axle_block_restore_copy_max_results` | filter | `( int $max )`. Most posts one search returns. Default 20 |
 | `axle_block_restore_history_max_revisions` | filter | `( int $max )`. Most revisions the `block-history` ability and the `history` command look through. Default 200 |
 | `axle_block_restore_history_similarity` | filter | `( array $settings, int $post_id )`. `similarity` (default 0.5) and `position_similarity` (default 0.2), the shares of words two versions need in common, as in the editor |
+| `axle_block_restore_autosaves_capability` | filter | `( string $capability, string $post_type )`. Capability, besides `edit_post`, needed to see and restore from other people's autosaves. Default the post type's `edit_others_posts` |
+| `axle_block_restore_autosaves_limit` | filter | `( int $limit, int $post_id )`. Most autosaves of other people in the list. Default 20 |
+| `axle_block_restore_autosaves` | filter | `( array $items, int $post_id )`. The list the editor shows, after the capability check. Each item has `id`, `author_id`, `author`, `date_gmt` and `content` |
+| `axle_block_restore_autosaves_listed` | action | `( int $post_id, array $items )`. Autosaves of other people were listed for the current person |
 | `axle_block_restore_history_read` | action | `( int $post_id, int[] $path, array $history )`. The history of a block was read through the ability or WP-CLI |
 
 JavaScript, through `wp.hooks`:
@@ -204,6 +264,9 @@ JavaScript, through `wp.hooks`:
 | `axleBlockRestore.historySimilarity` | filter | `( { similarity, positionSimilarity } settings )`. Share of words, 0 to 1, two versions need in common for the history to follow the block: `similarity` (default 0.5), and `positionSimilarity` for the same type at the same place (default 0.2) |
 | `axleBlockRestore.historyEntries` | filter | `( Object[] entries, { clientId, revisionIds } )`. The entries of a block's history, newest first. Each has `type` (`first`, `added`, `edited`, `removed`, `readded`), `revisionId` (`current` for what is not saved), `revisionIds`, `when`, `author`, `autosave`, `item` (the version, or null for removed), `previous` and `change` |
 | `axleBlockRestore.uniqueAnchors` | filter | `( boolean unique, Object block )`. Whether a block put into the post gets anchors that no other block uses. Default true |
+| `axleBlockRestore.windowTitle` | filter | `( string title, string view, Object\|null target )`. The window's title. By default it names the open tab: "History of this Paragraph", "Removed blocks", "Copy from another post" |
+| `axleBlockRestore.deepLinkEnabled` | filter | `( boolean enabled, { revision, path, anchor, clientId } link )`. Whether a history link opens the window. Default true |
+| `axleBlockRestore.deepLinkOpened` | action | `( { clientId, revision, missing } )`. A history link opened the window. `clientId` is the block it was matched to now, or null. `missing` is true when the link named a block that is not in the post any more |
 | `axleBlockRestore.restoredMessage` | filter | `( string message, string mode )`. The message of the notice after a restore or insert |
 | `axleBlockRestore.copyPostTypes` | filter | `( string[] postTypes )`. Post types the Another post view offers. Can only narrow the PHP list. An empty array hides the view |
 | `axleBlockRestore.attributeRole` | filter | `( string role, string name, string blockName, Object schema )`. Whether an attribute is `content`, `style` or `keep` for a partial restore. Default from `block.json` `role`, the attribute's source and the style list. Any other return value is ignored |
@@ -239,6 +302,8 @@ Load that script with `wp-hooks` as a dependency, on `enqueue_block_editor_asset
 
 On WordPress 6.9 and later, Axle Block Restore registers [abilities](https://developer.wordpress.org/apis/abilities/), which AI agents find and run through the [MCP adapter](https://github.com/WordPress/mcp-adapter) and anything else through the REST API under `/wp-abilities/v1/`. Each one is marked public, which the MCP adapter needs before it lists an ability.
 
+The Site Editor's own types (templates, template parts, synced patterns) follow `axle_block_restore_site_editor_post_types` here too: taking `wp_block` out of that list stops the abilities writing to patterns, not only the Site Editor from offering them.
+
 Abilities work with post IDs, so they reach templates, template parts and patterns by the ID of their post. Restoring only the content or only the styling is an editor feature: the saved markup of a block (its classes and inline styles) only comes from the block's own `save()` function, which runs in JavaScript.
 
 In the editor the plugin guesses which old block matches which current one. An agent does not need the guess: it finds text that was deleted or changed, then names the exact block to bring back. A path counts blocks from 0, one number per level: `[2]` is the third top-level block, `[2, 0]` the first block inside it.
@@ -246,6 +311,7 @@ In the editor the plugin guesses which old block matches which current one. An a
 | Ability | Does |
 | --- | --- |
 | `axle-block-restore/list-revisions` | Read-only. Revisions of `post_id`, newest first, with who saved each |
+| `axle-block-restore/list-autosaves` | Read-only. Autosaves other people left on `post_id`, newest first, with who and when. Needs permission to edit other people's posts. Pass an `id` to `restore-block` as `revision_id` |
 | `axle-block-restore/block-history` | Read-only. Every version the block at `path` (in the post as it is now) had in the newest `revisions` revisions (default 100, up to 200), newest first: type (`first`, `added`, `edited`, `removed`, `readded`), `revision_id`, `date`, `author`, `autosave`, the text and the text before, whether the text changed, the settings that changed, and how many saves kept that version. An entry with `current` true is what the post has now when it is newer than the newest revision |
 | `axle-block-restore/find-deleted` | Read-only. Blocks whose text is in an old revision but not in the post, with the `revision_id` and `path` to restore them |
 | `axle-block-restore/find-text` | Read-only. Blocks in old revisions containing `text`, and whether each is still in the post |
@@ -260,11 +326,11 @@ All five need `edit_post` on that post, in a post type that has Axle Block Resto
 
 ## REST
 
-Revisions are fetched 50 at a time from `/wp/v2/<rest base>/<id>/revisions` with `context=edit` and `_fields=id,wp_id,modified,date_gmt,slug,content.raw,axle_block_restore_author`, so the server returns raw block markup and never renders the content. The rest base is `templates`, `template-parts` or `blocks` in the Site Editor.
+Revisions are fetched 50 at a time from `/wp/v2/<rest base>/<id>/revisions` with `context=edit` and `_fields=id,wp_id,author,modified,date_gmt,slug,content.raw,axle_block_restore_author`, so the server returns raw block markup and never renders the content. The rest base is `templates`, `template-parts` or `blocks` in the Site Editor.
 
 Template and template part revisions come from core's templates controller, so each one has `id` set to the template's ID (`theme//slug`), its own ID in `wp_id`, and its time in `modified`, in the site's time zone. The window reads those.
 
-The plugin adds one read-only route, `/axle-block-restore/v1/posts` (see Copying a block from another post), and one read-only field to revision responses:
+The plugin adds two read-only routes and one read-only field to revision responses. `/axle-block-restore/v1/posts` is described under Copying a block from another post. `/axle-block-restore/v1/autosaves/<post>` lists the autosaves other people left on a post, as revision-shaped items (`id`, `author_id`, `date_gmt`, `slug`, `content.raw`, `axle_block_restore_author`), newest first. It answers 403 unless the person may edit that post and other people's posts of its type.
 
 | Field | Value |
 | --- | --- |

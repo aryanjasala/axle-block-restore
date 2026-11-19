@@ -1104,6 +1104,67 @@
 		} );
 	}
 
+	/**
+	 * A copy of a block, and of the blocks inside it, without the link to a Note.
+	 *
+	 * A Note is a comment thread kept in `metadata.noteId`. A copy that keeps the
+	 * ID would point at the original block's thread. The block given is not changed.
+	 *
+	 * @param {{attributes: Object, innerBlocks: Array}} block Block, with its inner blocks.
+	 * @return {Object} Copy with no `metadata.noteId`. An empty `metadata` goes too.
+	 */
+	function withoutNoteIds( block ) {
+		var attributes = Object.assign( {}, block.attributes );
+		var metadata;
+
+		if ( attributes.metadata && 'object' === typeof attributes.metadata && 'noteId' in attributes.metadata ) {
+			metadata = Object.assign( {}, attributes.metadata );
+			delete metadata.noteId;
+			if ( Object.keys( metadata ).length ) {
+				attributes.metadata = metadata;
+			} else {
+				delete attributes.metadata;
+			}
+		}
+
+		return Object.assign( {}, block, {
+			attributes: attributes,
+			innerBlocks: ( block.innerBlocks || [] ).map( withoutNoteIds ),
+		} );
+	}
+
+	/**
+	 * Reads the address that opens a block's history.
+	 *
+	 * `?axle-block-restore=history`, then optionally `axle-revision` (a revision ID; `revision` is read too, but
+	 * WordPress 7.0 answers that name with its own revisions view, so the server renames it), `path` (block
+	 * position, numbers separated by commas), `anchor` (the block's HTML anchor) and `clientId`.
+	 * Anything that is not valid is left out, so a damaged link still opens the window.
+	 *
+	 * @param {string} search Query string, with or without the leading "?".
+	 * @return {{revision: number, path: number[], anchor: string, clientId: string}|null} What to open, or null when the address is not a history link.
+	 */
+	function parseDeepLink( search ) {
+		var params = new URLSearchParams( String( search || '' ) );
+	var revisionText = String( params.get( 'axle-revision' ) || params.get( 'revision' ) || '' ).trim();
+	var revision = parseInt( revisionText, 10 );
+		var pathText = String( params.get( 'path' ) || '' );
+		var path = /^\d{1,6}(,\d{1,6}){0,19}$/.test( pathText ) ? pathText.split( ',' ).map( Number ) : [];
+		var anchor = String( params.get( 'anchor' ) || '' ).trim().slice( 0, 200 );
+		var clientId = String( params.get( 'clientId' ) || '' );
+
+		if ( 'history' !== params.get( 'axle-block-restore' ) ) {
+			return null;
+		}
+
+		return {
+			revision: revision > 0 && String( revision ) === revisionText ? revision : 0,
+			path: path,
+			anchor: anchor,
+			clientId: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test( clientId ) ? clientId : '',
+		};
+	}
+
 	return {
 		textFromMarkup: textFromMarkup,
 		similarity: similarity,
@@ -1127,11 +1188,14 @@
 		placement: placement,
 		isAncestor: isAncestor,
 		findCounterpart: findCounterpart,
+		historySettings: historySettings,
 		startTimeline: startTimeline,
 		advanceTimeline: advanceTimeline,
 		timelineEntries: timelineEntries,
 		describeChange: describeChange,
 		collectAnchors: collectAnchors,
 		uniqueAnchors: uniqueAnchors,
+		withoutNoteIds: withoutNoteIds,
+		parseDeepLink: parseDeepLink,
 	};
 } );

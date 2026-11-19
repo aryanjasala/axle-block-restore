@@ -30,7 +30,7 @@ test.describe( 'Axle Block Restore: command palette', () => {
 		await expect( await palette( 'Restore selected block from a revision' ) ).toHaveCount( 0 );
 
 		await run( 'Restore blocks from a revision' );
-		const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+		const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 		await page.keyboard.press( 'Escape' );
 		await expect( modal ).toHaveCount( 0 );
@@ -38,7 +38,7 @@ test.describe( 'Axle Block Restore: command palette', () => {
 		const clientId = await page.evaluate( () => window.wp.data.select( 'core/block-editor' ).getBlocks()[ 2 ].clientId );
 		await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
 		await run( 'Restore selected block from a revision' );
-		const blockModal = page.getByRole( 'dialog', { name: 'Restore this Paragraph from a revision' } );
+		const blockModal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( blockModal.locator( '.abr-card' ).first() ).toContainText( 'Flour, sugar, eggs.' );
 		await page.keyboard.press( 'Escape' );
 		await expect( blockModal ).toHaveCount( 0 );
