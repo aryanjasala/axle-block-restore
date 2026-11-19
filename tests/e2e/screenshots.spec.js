@@ -122,7 +122,7 @@ test.describe( 'Screenshots', () => {
 		for ( const content of VERSIONS ) {
 			await save( id, { content, status: 'publish' } );
 		}
-		const maria = wp( 'user', 'create', 'maria', 'maria@example.com', '--role=editor', '--display_name=Maria Silva', '--user_pass=maria-pass-123', '--porcelain' );
+		const maria = wp( 'user', 'create', 'maria-silva', 'maria-silva@example.com', '--role=editor', '--display_name=Maria Silva', '--user_pass=maria-pass-123', '--porcelain' );
 		try {
 			const draft = Buffer.from( VERSIONS[ 1 ] + '\n\n' + p( 'Maria\'s note: feed the starter twice a day when the kitchen is warm.' ) ).toString( 'base64' );
 			wpEval( `sleep( 2 ); wp_set_current_user( ${ maria } ); wp_create_post_autosave( array( 'post_ID' => ${ id }, 'post_title' => 'Sourdough for beginners', 'post_content' => base64_decode( '${ draft }' ), 'post_type' => 'post' ) );` );
