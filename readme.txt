@@ -4,7 +4,7 @@ Tags: revisions, block editor, undo, restore, blocks
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.0
+Stable tag: 3.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,6 +132,10 @@ Attributes with `role: content` in a block's `block.json`, and text read from th
 7. A colleague's unsaved work, listed first in the revision list, with its age.
 
 == Changelog ==
+
+= 3.2.0 =
+* New: pick up unsaved work and open a block's history from a link
+* New: see every version of a block and insert old versions as copies
 
 = 3.1.0 =
 * New: show recently removed blocks and copy blocks from another post
