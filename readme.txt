@@ -52,6 +52,14 @@ Open the editor menu, choose **Restore blocks from a revision**, then the **Remo
 
 The **Another post** tab searches the posts and pages you can edit. Pick one, choose its current version or one of its revisions, and insert any of its blocks below the selected block or at the end. Only posts you can edit are offered, and the server checks that as well.
 
+**Pick up a colleague's unsaved work**
+
+WordPress keeps one autosave per person per post, and only that person is told about it. If a colleague's laptop died halfway through an edit, their text is in the database and you cannot see it. If you can edit other people's posts, the revision list starts with **Unsaved work from other people**: one row for each person who left an autosave on this post, with their name and how long ago. Pick a row and restore any block from it, or insert it below as a copy. An autosave is replaced the next time its author edits, so the window says so. People who cannot edit other people's posts see no name, no text and no count.
+
+**A link that opens a block's history**
+
+Other tools can link straight to a change: `post.php?post=12&action=edit&axle-block-restore=history&revision=345&path=2` opens the editor on that revision, with the block's history showing. The parameters are in the plugin's reference on GitHub.
+
 **Restore only the content, or only the styling**
 
 With one block selected, each older version also has **Restore content only** (the words, links and inner blocks, keeping the block's current colours, fonts, spacing and layout) and **Restore styling only** (the old look, keeping what the block says now). An option that would change nothing is greyed out, and "Show changes" shows what the option you pick would change.
@@ -121,6 +129,7 @@ Attributes with `role: content` in a block's `block.json`, and text read from th
 4. Restoring a block of a template part in the Site Editor.
 5. Restoring a group, with what differs inside it.
 6. The history of one block: each version, who saved it, when, and the words that changed.
+7. A colleague's unsaved work, listed first in the revision list, with its age.
 
 == Changelog ==
 

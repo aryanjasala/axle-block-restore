@@ -9,7 +9,7 @@ async function openRemoved( page ) {
 	} );
 	await page.getByRole( 'combobox', { name: /Search commands/i } ).fill( 'Show removed blocks' );
 	await page.getByRole( 'option', { name: 'Show removed blocks' } ).click();
-	return page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+	return page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 }
 
 test.describe( 'Axle Block Restore: removed blocks', () => {

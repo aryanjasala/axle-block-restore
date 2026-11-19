@@ -6,8 +6,10 @@
 ( function ( wp, restore ) {
 	'use strict';
 
+	// Read now: the editor rewrites the address once it starts, and drops any parameter it does not know.
+	const addressAtLoad = window.location.search;
 	const el = wp.element.createElement;
-	const { Fragment, useState, useCallback, useMemo } = wp.element;
+	const { Fragment, useState, useCallback, useMemo, useEffect } = wp.element;
 	const { __ } = wp.i18n;
 	const { registerPlugin } = wp.plugins;
 	const { BlockSettingsMenuControls } = wp.blockEditor;
@@ -136,8 +138,91 @@
 		};
 	}
 
+	/**
+	 * Opens the window from a history link once the editor has its blocks.
+	 *
+	 * The link is `post.php?post=12&action=edit&axle-block-restore=history&revision=345&path=2`. See
+	 * matching.parseDeepLink() for every parameter. The editor drops the parameters from the address
+	 * bar itself when it starts, so reloading does not open the window again.
+	 *
+	 * @param {Function} setOpen Opens the window with { clientId, view, link }.
+	 */
+	function useDeepLink( setOpen ) {
+		useEffect( () => {
+			const link = restore.matching.parseDeepLink( addressAtLoad );
+			if ( ! link ) {
+				return undefined;
+			}
+
+			/**
+			 * Filters whether a history link opens the restore window.
+			 *
+			 * @param {boolean} enabled Default true.
+			 * @param {Object}  link    What the link names: revision, path, anchor and clientId.
+			 */
+			if ( ! applyFilters( 'axleBlockRestore.deepLinkEnabled', true, link ) ) {
+				return undefined;
+			}
+
+			let finished = false;
+			let unsubscribe = () => undefined;
+			const timeout = window.setTimeout( () => {
+				finished = true;
+				unsubscribe();
+			}, 30000 );
+
+			const ready = () => {
+				const editor = select( 'core/editor' );
+				const entity = restore.resolveEntity( select, null );
+				return !! editor.getCurrentPostId() && restore.isSupported( entity ) && ( select( 'core/block-editor' ).getBlockCount() > 0 || '' === editor.getEditedPostContent() );
+			};
+
+			const go = () => {
+				if ( finished || ! ready() ) {
+					return;
+				}
+				finished = true;
+				unsubscribe();
+				window.clearTimeout( timeout );
+
+				restore.resolveDeepLink( link ).then( ( target ) => {
+					// Older editors keep the address as it is, so take the link out of it here: a reload must not open the window again.
+					const params = new URLSearchParams( window.location.search );
+					[ 'axle-block-restore', 'axle-revision', 'revision', 'path', 'anchor', 'clientId' ].forEach( ( key ) => params.delete( key ) );
+					window.history.replaceState( null, '', window.location.pathname + ( params.toString() ? '?' + params.toString() : '' ) + window.location.hash );
+					if ( target.clientId ) {
+						wp.data.dispatch( 'core/block-editor' ).selectBlock( target.clientId );
+					}
+
+					/**
+					 * Fires when a history link opens the restore window.
+					 *
+					 * @param {Object}      details          What was opened.
+					 * @param {string|null} details.clientId Block the link was matched to in the post now, or null.
+					 * @param {number}      details.revision Revision the link names, or 0.
+					 * @param {boolean}     details.missing  True when the link named a block that is not in the post any more.
+					 */
+					wp.hooks.doAction( 'axleBlockRestore.deepLinkOpened', { clientId: target.clientId, revision: target.revision, missing: target.missing } );
+					// The plugin's component can be mounted again while the editor settles, so the request is kept outside it too.
+					restore.pendingOpen = { clientId: target.clientId, view: target.clientId ? 'history' : 'revisions', link: target };
+					setOpen( restore.pendingOpen );
+				} );
+			};
+
+			unsubscribe = wp.data.subscribe( go );
+			go();
+
+			return () => {
+				finished = true;
+				unsubscribe();
+				window.clearTimeout( timeout );
+			};
+		}, [] );
+	}
+
 	function BlockRestore() {
-		const [ open, setOpen ] = useState( null );
+		const [ open, setOpen ] = useState( () => restore.pendingOpen || null );
+		useDeepLink( setOpen );
 		const here = useSelect( ( reader ) => restore.isSupported( restore.resolveEntity( reader, null ) ), [] );
 
 		// One hook for the palette's lifetime: a new one on every render would register again each time.
@@ -191,7 +276,10 @@
 					__( 'Block history', 'axle-block-restore' )
 				);
 			} ),
-			open && el( restore.RestoreModal, { clientId: open.clientId, focusSearch: !! open.focusSearch, view: open.view || 'revisions', onClose: () => setOpen( null ) } )
+			open && el( restore.RestoreModal, { clientId: open.clientId, focusSearch: !! open.focusSearch, view: open.view || 'revisions', link: open.link, onClose: () => {
+				restore.pendingOpen = null;
+				setOpen( null );
+			} } )
 		);
 	}
 

@@ -49,6 +49,9 @@ WordPress revisions are all or nothing. If someone deleted a paragraph last week
 - **Block history**: select a block and see every version it had, newest first, with who saved it, when, and the words that changed. Removed and added back are shown as such
 - **Insert below as a copy** next to every restore, so you can compare the old version with the current block before you choose. The copy gets new IDs and never repeats an anchor
 - After a restore a notice offers **Undo**, and for a copy also **Compare**, which scrolls to the new block
+- **Unsaved work from other people**: a colleague's autosave appears in the window with its age, for people who may edit other people's posts. Any block in it can be restored or inserted as a copy
+- **A link that opens a block's history** (`post.php?post=12&action=edit&axle-block-restore=history&revision=345&path=2`) for other plugins to use
+- The window's title follows the tab, and **Preview** comes first in every entry. Copies never share a Note thread with the original
 - Command palette: Restore blocks from a revision, Restore selected block from a revision, Show history of selected block, Find text in old revisions, Show removed blocks
 - WP-CLI (`wp axle-block-restore`), abilities for agents including the history of a block, and a Site Health test for post types that keep no revisions
 
@@ -84,6 +87,10 @@ There is no build step and nothing is stored: revisions are read through the RES
   </tr>
   <tr>
     <td width="50%" valign="top"><img src=".wordpress-org/screenshot-5.png" alt="Restoring a group, with what differs inside it"><br><sub>Restoring a group, with what differs inside it</sub></td>
+    <td width="50%" valign="top"><img src=".wordpress-org/screenshot-6.png" alt="The history of one block: each version, who saved it, when, and the words that changed"><br><sub>The history of one block: each version, who saved it, when, and the words that changed</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src=".wordpress-org/screenshot-7.png" alt="A colleague's unsaved work, listed first in the revision list, with its age"><br><sub>A colleague's unsaved work, listed first in the revision list, with its age</sub></td>
   </tr>
 </table>
 
@@ -105,6 +112,8 @@ axle-block-restore.php     plugin header and PSR-4 autoloader
 src/
 ├── Plugin.php            registers the services, lists supported post types
 ├── Abilities.php         abilities for agents
+├── Autosaves.php         other people's autosaves: who may see them, the list route
+├── DeepLink.php          renames revision to axle-revision on history links
 ├── Timeline.php          the history of one block, in PHP
 ├── Cli/Command.php       wp axle-block-restore
 ├── Health/Revisions.php  Site Health test
@@ -143,7 +152,7 @@ Small plugins that each fill one gap in WordPress, all free with no pro version.
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-runtime-doctor/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Runtime Doctor](https://github.com/aryanjasala/axle-runtime-doctor) | Check OPcache coverage, the object cache, PHP support and limits, cron and more, with the fix for your host |
 | <img src="https://raw.githubusercontent.com/aryanjasala/axle-smoke-test/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Axle Smoke Test](https://github.com/aryanjasala/axle-smoke-test) | Check key pages after every update or deploy, see what broke and roll it back |
 | <img src="https://raw.githubusercontent.com/aryanjasala/block-doctor/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Block Doctor](https://github.com/aryanjasala/block-doctor) | Scan the site for broken blocks and fix them in bulk, with undo. See which posts use each block before you switch a plugin off |
-| <img src="https://raw.githubusercontent.com/aryanjasala/block-theme-ops/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Block Theme Ops](https://github.com/aryanjasala/block-theme-ops) | Find Site Editor changes that override your theme files, see the diff, reset them or send them to Git |
+| <img src="https://raw.githubusercontent.com/aryanjasala/block-theme-ops/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Block Theme Ops](https://github.com/aryanjasala/block-theme-ops) | Find Site Editor changes that override your theme files, see the diff, reset them, send them to Git, move them to another site or lock them |
 | <img src="https://raw.githubusercontent.com/aryanjasala/role-right-sizer/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Role Right-Sizer](https://github.com/aryanjasala/role-right-sizer) | Recommends the smallest role each user needs, from what they actually do |
 | <img src="https://raw.githubusercontent.com/aryanjasala/update-rehearsal/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [Update Rehearsal](https://github.com/aryanjasala/update-rehearsal) | Try plugin, theme, core and PHP updates, a new plugin, or life without one, on a disposable copy of your site in WordPress Playground first |
 | <img src="https://raw.githubusercontent.com/aryanjasala/user-session-manager/main/.wordpress-org/icon-128x128.png" alt="" width="32"> | [User Session Manager](https://github.com/aryanjasala/user-session-manager) | See every device signed in, sign out one, and limit sessions per role |

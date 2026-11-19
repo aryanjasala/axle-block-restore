@@ -8,6 +8,7 @@
 namespace AryanX\Axle\BlockRestore\Rest;
 
 use AryanX\Axle\BlockRestore\Plugin;
+use AryanX\Axle\BlockRestore\Autosaves;
 use AryanX\Axle\BlockRestore\Service;
 
 defined( 'ABSPATH' ) || exit;
@@ -64,7 +65,14 @@ final class RevisionAuthor implements Service {
 	 * @return string
 	 */
 	public function author_name( array $revision ): string {
-		$author = $revision['author'] ?? get_post_field( 'post_author', (int) ( $revision['wp_id'] ?? $revision['id'] ?? 0 ) );
+		$id   = (int) ( $revision['wp_id'] ?? $revision['id'] ?? 0 );
+		$post = $id ? get_post( $id ) : null;
+		// Somebody else's autosave names its owner only to people allowed to see it.
+		if ( $post instanceof \WP_Post && ! Autosaves::can_see( $post ) ) {
+			return '';
+		}
+
+		$author = $revision['author'] ?? get_post_field( 'post_author', $id );
 		$user   = get_userdata( (int) $author );
 
 		return $user ? $user->display_name : '';

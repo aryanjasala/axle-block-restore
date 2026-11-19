@@ -113,4 +113,27 @@ test.describe( 'Screenshots', () => {
 		await expect( page.locator( '.abr-timeline__item .abr-diff' ).first() ).toBeVisible();
 		await shot( page, 6 );
 	} );
+
+	test( '7: a colleague\'s unsaved work in the window', async ( { page, request } ) => {
+		const { wp, wpEval } = require( './utils' );
+		const nonce = ( await ( await request.get( '/wp-admin/admin-ajax.php?action=rest-nonce' ) ).text() ).trim();
+		const save = ( id, data ) => request.post( `/index.php?rest_route=/wp/v2/posts${ id ? '/' + id : '' }`, { headers: { 'X-WP-Nonce': nonce }, data } );
+		const id = ( await ( await save( 0, { title: 'Sourdough for beginners', status: 'draft', content: 'x' } ) ).json() ).id;
+		for ( const content of VERSIONS ) {
+			await save( id, { content, status: 'publish' } );
+		}
+		const maria = wp( 'user', 'create', 'maria-silva', 'maria-silva@example.com', '--role=editor', '--display_name=Maria Silva', '--user_pass=maria-pass-123', '--porcelain' );
+		try {
+			const draft = Buffer.from( VERSIONS[ 1 ] + '\n\n' + p( 'Maria\'s note: feed the starter twice a day when the kitchen is warm.' ) ).toString( 'base64' );
+			wpEval( `sleep( 2 ); wp_set_current_user( ${ maria } ); wp_create_post_autosave( array( 'post_ID' => ${ id }, 'post_title' => 'Sourdough for beginners', 'post_content' => base64_decode( '${ draft }' ), 'post_type' => 'post' ) );` );
+			await openEditor( page, id );
+			await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
+			await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
+			await page.getByRole( 'option', { name: /Maria Silva/ } ).click();
+			await expect( page.locator( '.abr-autosave-note' ) ).toBeVisible();
+			await shot( page, 7 );
+		} finally {
+			wp( 'user', 'delete', maria, '--yes', '--reassign=1' );
+		}
+	} );
 } );

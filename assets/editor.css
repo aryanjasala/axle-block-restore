@@ -65,6 +65,34 @@
 	align-items: center;
 }
 
+/* Unsaved work of other people, above the saved revisions */
+.abr-revisions__group {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.abr-revisions__group + .abr-revisions__group {
+	margin-top: 12px;
+}
+
+.abr-revisions__heading {
+	margin: 0 0 2px;
+	padding: 0 10px;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+.abr-autosave-note {
+	margin: 0 0 12px;
+}
+
+/* The version a history link pointed at */
+.abr-history__entry.is-linked {
+	box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #3858e9);
+}
+
 /* Blocks of the selected revision */
 .abr-blocks {
 	max-height: 66vh;

@@ -538,6 +538,83 @@
           "--force"
         ]
       ]
+    },
+    {
+      "name": "Restore blocks from a revision, with unsaved work from another person",
+      "setup": [
+        {
+          "wp": [
+            "user",
+            "create",
+            "maria-a11y",
+            "maria-a11y@example.com",
+            "--role=editor",
+            "--display_name=Maria Silva",
+            "--user_pass=maria-a11y-pass",
+            "--porcelain"
+          ],
+          "save": "maria"
+        },
+        {
+          "wp": [
+            "post",
+            "create",
+            "--post_title=Sourdough basics",
+            "--post_status=publish",
+            "--porcelain"
+          ],
+          "save": "post"
+        },
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "post",
+          "update",
+          "{post}",
+          "--post_content=<!-- wp:paragraph --><p>A starter is flour and water that has been fed for a week.</p><!-- /wp:paragraph -->"
+        ],
+        [
+          "eval",
+          "sleep( 2 ); wp_set_current_user( {maria} ); wp_create_post_autosave( array( 'post_ID' => {post}, 'post_title' => 'Sourdough basics', 'post_content' => base64_decode( 'PCEtLSB3cDpwYXJhZ3JhcGggLS0+PHA+QSBzdGFydGVyIGlzIGZsb3VyIGFuZCB3YXRlciB0aGF0IGhhcyBiZWVuIGZlZCBmb3IgYSB3ZWVrLjwvcD48IS0tIC93cDpwYXJhZ3JhcGggLS0+Cgo8IS0tIHdwOnBhcmFncmFwaCAtLT48cD5NYXJpYSdzIHVuc2F2ZWQgbm90ZTogZmVlZCBpdCB0d2ljZSBhIGRheSBpbiBzdW1tZXIuPC9wPjwhLS0gL3dwOnBhcmFncmFwaCAtLT4=' ), 'post_type' => 'post' ) );"
+        ]
+      ],
+      "editor": "{post}",
+      "steps": [
+        {
+          "click": "role=region[name=/Editor top bar/i] >> role=button[name=/Options/i]"
+        },
+        {
+          "click": "role=menuitem[name=/Restore blocks from a revision/i]"
+        },
+        {
+          "click": "role=option[name=/Maria Silva/i]"
+        },
+        {
+          "waitFor": ".abr-autosave-note"
+        },
+        {
+          "evaluate": "Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) )"
+        }
+      ],
+      "cleanup": [
+        [
+          "post",
+          "delete",
+          "{post}",
+          "--force"
+        ],
+        [
+          "user",
+          "delete",
+          "{maria}",
+          "--yes",
+          "--reassign=1"
+        ]
+      ]
     }
   ],
   "skip": {}

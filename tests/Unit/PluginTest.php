@@ -229,6 +229,7 @@ final class PluginTest extends TestCase {
 	}
 
 	public function test_a_template_revision_author_comes_from_its_author_field(): void {
+		Functions\when( 'get_post' )->justReturn( false );
 		Functions\when( 'get_userdata' )->alias(
 			static function ( $user_id ) {
 				return 3 === $user_id ? (object) array( 'display_name' => 'Aryan' ) : false;

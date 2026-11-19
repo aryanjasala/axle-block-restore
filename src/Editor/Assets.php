@@ -7,6 +7,7 @@
 
 namespace AryanX\Axle\BlockRestore\Editor;
 
+use AryanX\Axle\BlockRestore\Autosaves;
 use AryanX\Axle\BlockRestore\Plugin;
 use AryanX\Axle\BlockRestore\Rest\PostSearch;
 use AryanX\Axle\BlockRestore\Service;
@@ -57,8 +58,11 @@ final class Assets implements Service {
 
 		wp_register_script( 'axle-block-restore-matching', $url . 'js/matching.js', array(), VERSION, true );
 		$config = array(
-			'postTypes'     => $post_types,
-			'copyPostTypes' => PostSearch::source_post_types(),
+			'postTypes'       => $post_types,
+			'copyPostTypes'   => PostSearch::source_post_types(),
+			// Other people's autosaves are only listed in the post editor, to people who may edit other people's posts. The server checks again for every post.
+			'canSeeAutosaves' => 'post' === $screen->base && current_user_can( Autosaves::capability( (string) $screen->post_type ) ),
+			'userId'          => get_current_user_id(),
 		);
 		wp_add_inline_script( 'axle-block-restore-matching', 'window.axleBlockRestore.config = ' . wp_json_encode( $config ) . ';' );
 		wp_register_script(

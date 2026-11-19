@@ -51,7 +51,7 @@ async function selectAndOpenMenu( page, clientId ) {
 	await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
 	await page.getByRole( 'toolbar', { name: 'Block tools' } ).getByRole( 'button', { name: 'Options' } ).click();
 	await page.getByRole( 'menuitem', { name: 'Restore from a revision…' } ).click();
-	const modal = page.getByRole( 'dialog', { name: /^Restore this .* from a revision$/ } );
+	const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 	await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 	return modal;
 }
@@ -90,7 +90,7 @@ test.describe( 'Axle Block Restore in the Site Editor', () => {
 
 		await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 		await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
-		const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+		const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 
 		const missing = modal.locator( '.abr-card', { has: page.locator( '.abr-badge--missing' ) } );
@@ -104,7 +104,7 @@ test.describe( 'Axle Block Restore in the Site Editor', () => {
 		await openSiteEditor( page, 'wp_template_part', `${ THEME }//header` );
 
 		await runCommand( page, 'Show removed blocks' );
-		const modal = page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } );
+		const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( modal.getByRole( 'tab', { name: 'Removed blocks', selected: true } ) ).toBeVisible();
 		const card = modal.locator( '.abr-card', { hasText: 'Header line two.' } );
 		await expect( card ).toHaveCount( 1 );
@@ -133,7 +133,7 @@ test.describe( 'Axle Block Restore in the Site Editor', () => {
 		// restore item there (the part opens with "Edit original"). The command palette still reaches them.
 		await page.evaluate( ( id ) => window.wp.data.dispatch( 'core/block-editor' ).selectBlock( id ), clientId );
 		await runCommand( page, 'Restore selected block from a revision' );
-		const modal = page.getByRole( 'dialog', { name: /^Restore this .* from a revision$/ } );
+		const modal = page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } );
 		await expect( modal.locator( '.abr-revision' ).first() ).toBeVisible();
 		await expect( modal.getByRole( 'option' ) ).toHaveCount( 2 );
 		await modal.locator( '.abr-card' ).first().getByRole( 'button', { name: 'Replace current block' } ).click();
@@ -173,7 +173,7 @@ test.describe( 'Axle Block Restore in the Site Editor', () => {
 		await openSiteEditor( page, 'wp_template', `${ THEME }//single` );
 		await page.getByRole( 'region', { name: 'Editor top bar' } ).getByRole( 'button', { name: 'Options' } ).click();
 		await page.getByRole( 'menuitem', { name: 'Restore blocks from a revision' } ).click();
-		await expect( page.getByRole( 'dialog', { name: 'Restore blocks from a revision' } ) ).toContainText( 'still comes from the theme' );
+		await expect( page.getByRole( 'dialog', { name: /^(Restore this .* from a revision|Restore blocks from a revision|History of this .*|Removed blocks|Copy from another post)$/ } ) ).toContainText( 'still comes from the theme' );
 	} );
 
 	test( 'restores a block of a synced pattern', async ( { page, rest } ) => {
