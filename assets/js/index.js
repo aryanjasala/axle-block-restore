@@ -186,6 +186,10 @@
 				window.clearTimeout( timeout );
 
 				restore.resolveDeepLink( link ).then( ( target ) => {
+					// Older editors keep the address as it is, so take the link out of it here: a reload must not open the window again.
+					const params = new URLSearchParams( window.location.search );
+					[ 'axle-block-restore', 'axle-revision', 'revision', 'path', 'anchor', 'clientId' ].forEach( ( key ) => params.delete( key ) );
+					window.history.replaceState( null, '', window.location.pathname + ( params.toString() ? '?' + params.toString() : '' ) + window.location.hash );
 					if ( target.clientId ) {
 						wp.data.dispatch( 'core/block-editor' ).selectBlock( target.clientId );
 					}

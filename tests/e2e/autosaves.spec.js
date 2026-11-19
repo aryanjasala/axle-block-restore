@@ -133,6 +133,7 @@ test.describe( 'Axle Block Restore: unsaved work of other people', () => {
 	} );
 
 	test( 'abilities and WP-CLI list the autosaves, and the restore ability takes a block from one', async ( { rest } ) => {
+		test.skip( 'yes' !== wpEval( "echo function_exists( 'wp_register_ability' ) ? 'yes' : 'no';" ), 'The Abilities API needs WordPress 6.9.' );
 		const maria = wp( 'user', 'create', 'marias' + stamp(), `marias${ stamp() }@example.com`, '--role=editor', '--display_name=Maria Shell', '--user_pass=abr-pass-123', '--porcelain' );
 		try {
 			const postId = await createPost( rest, 'ABR autosave ability' );

@@ -36,6 +36,7 @@ test.describe( 'Axle Block Restore: history link', () => {
 		await expect( linked ).toContainText( 'Intro paragraph about cooking.' );
 		// The link leaves the address bar, so a reload does not open the window again.
 		expect( page.url() ).not.toContain( 'axle-block-restore' );
+		expect( page.url() ).not.toContain( 'axle-revision' );
 		expect( page.url() ).toContain( `post=${ postId }` );
 	} );
 
